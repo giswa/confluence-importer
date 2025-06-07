@@ -4,20 +4,6 @@ Ce script Node.js permet d’importer un dossier de fichiers HTML dans Confluenc
 
 ---
 
-## Table des matières
-
-- [Prérequis](#prérequis)  
-- [Installation](#installation)  
-- [Configuration](#configuration)  
-- [Utilisation](#utilisation)  
-- [Options disponibles](#options-disponibles)  
-- [Fonctionnalités](#fonctionnalités)  
-- [Limitations et recommandations](#limitations-et-recommandations)  
-- [Journal des actions](#journal-des-actions)  
-- [Support](#support)  
-
----
-
 ## Prérequis
 
 - Node.js (version 14 ou supérieure recommandée)  
@@ -29,10 +15,20 @@ Ce script Node.js permet d’importer un dossier de fichiers HTML dans Confluenc
 
 ## Installation
 
-1. Cloner le dépôt ou copier le fichier `import-confluence.js` dans un dossier de travail.  
-2. Placer les fichiers HTML et ressources dans un dossier, par défaut `./html-files`.  
-3. Installer les dépendances nécessaires :
+1. Cloner le dépôt ou copier le fichier `main.js` dans un dossier de travail
+2. Installer les dépendances nécessaires :
 
 ```bash
 npm install axios cheerio form-data
+```
+
+3. Créer un fichier de d'environnement `.env` contenant les variables suivantes: 
+
+```bash
+CONFLUENCE_BASE_URL=https://your-instance.atlassian.net/wiki/  # your confluence instance url
+AUTH_EMAIL=user@mail.com       # user
+API_TOKEN=                     # api token
+SPACE_KEY=my_space             # space key name
+HTML_FOLDER_PATH='./output'    # local folder to import
+PARENT_PAGE_ID=                # optional parent page
 ```
