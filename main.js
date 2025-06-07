@@ -396,44 +396,119 @@ async function processImagesAndLinks($, title, basePath, pageId) {
   }
 }
 
-// === HELPER FUNCTION ===
+// === HELPER FUNCTION - MODIFIÉE POUR LIRE INDEX.HTML ===
 function getPageMap() {
-  const allFiles = fs.readdirSync(HTML_FOLDER_PATH).filter(f => f.endsWith('.html'));
-  const pageMap = {};
-  allFiles.forEach(file => {
-    pageMap[file] = path.basename(file, '.html');
-  });
-  return pageMap;
+  const indexPath = path.join(HTML_FOLDER_PATH, 'index.html');
+  
+  if (!fs.existsSync(indexPath)) {
+    console.error('❌ Fichier index.html introuvable dans:', HTML_FOLDER_PATH);
+    return {};
+  }
+  
+  try {
+    const indexHtml = fs.readFileSync(indexPath, 'utf-8');
+    const $ = cheerio.load(indexHtml);
+    const pageMap = {};
+    
+    $('a').each((_, element) => {
+      const href = $(element).attr('href');
+      const linkText = $(element).text().trim();
+      
+      if (href && href.endsWith('.html')) {
+        // Utilise le texte du lien comme titre, avec fallback au nom du fichier
+        pageMap[href] = linkText || path.basename(href, '.html');
+      }
+    });
+    
+    return pageMap;
+  } catch (error) {
+    console.error('❌ Erreur lecture index.html:', error.message);
+    return {};
+  }
 }
 
-// === MAIN FUNCTION (REFACTORISÉE) ===
+// === NOUVELLE FONCTION POUR EXTRAIRE LES FICHIERS DE INDEX.HTML ===
+function getHtmlFilesFromIndex() {
+  const indexPath = path.join(HTML_FOLDER_PATH, 'index.html');
+  
+  if (!fs.existsSync(indexPath)) {
+    console.error('❌ Fichier index.html introuvable dans:', HTML_FOLDER_PATH);
+    console.error('💡 Veuillez créer un fichier index.html avec des liens vers vos pages HTML');
+    return [];
+  }
+  
+  try {
+    const indexHtml = fs.readFileSync(indexPath, 'utf-8');
+    const $ = cheerio.load(indexHtml);
+    const htmlFiles = [];
+    
+    console.log('🔍 Analyse du fichier index.html...');
+    
+    $('a').each((_, element) => {
+      const href = $(element).attr('href');
+      const linkText = $(element).text().trim();
+      
+      if (href && href.endsWith('.html')) {
+        const fullPath = path.join(HTML_FOLDER_PATH, href);
+        
+        if (fs.existsSync(fullPath)) {
+          // Retourner un objet avec le fichier et le titre
+          htmlFiles.push({ 
+            file: href, 
+            title: linkText || path.basename(href, '.html') // Fallback au nom de fichier si pas de texte
+          });
+          console.log(`✅ Fichier trouvé: ${href} → "${linkText}"`);
+        } else {
+          console.warn(`⚠️ Fichier référencé mais introuvable: ${href} (${linkText})`);
+        }
+      }
+    });
+    
+    if (htmlFiles.length === 0) {
+      console.warn('⚠️ Aucun lien vers des fichiers .html trouvé dans index.html');
+      console.log('💡 Assurez-vous que votre index.html contient des liens comme: <a href="monpage.html">Mon Page</a>');
+    }
+    
+    return htmlFiles;
+    
+  } catch (error) {
+    console.error('❌ Erreur lecture index.html:', error.message);
+    return [];
+  }
+}
+
+// === MAIN FUNCTION (MODIFIÉE POUR LIRE INDEX.HTML) ===
 async function importHtmlFiles() {
   console.log('🚀 Début de l\'import...');
   
-  const allFiles = fs.readdirSync(HTML_FOLDER_PATH)
-    .filter(f => f.endsWith('.html'))
-    .slice(0, LIMIT);
+  // CHANGEMENT PRINCIPAL: utiliser getHtmlFilesFromIndex() au lieu de fs.readdirSync()
+  const allFilesData = getHtmlFilesFromIndex().slice(0, LIMIT);
     
-  console.log(`📊 ${allFiles.length} fichiers à traiter`);
+  if (allFilesData.length === 0) {
+    console.error('❌ Aucun fichier HTML à traiter. Vérifiez votre fichier index.html');
+    process.exit(1);
+  }
+  
+  console.log(`📊 ${allFilesData.length} fichiers à traiter (depuis index.html)`);
   
   if (DRY_RUN) {
     console.log('🔍 Mode DRY RUN activé - aucune modification ne sera effectuée');
   }
 
   let counter = 0;
-  for (const file of allFiles) {
+  for (const fileData of allFilesData) {
     counter++;
-    const title = path.basename(file, '.html');
+    const { file, title } = fileData;
     const filePath = path.join(HTML_FOLDER_PATH, file);
     
-    console.log(`\n📄 (${counter}/${allFiles.length}) Traitement: ${title}`);
+    console.log(`\n📄 (${counter}/${allFilesData.length}) Traitement: "${title}" (${file})`);
     
     try {
       // Lecture et nettoyage du HTML
       const html = fs.readFileSync(filePath, 'utf-8');
       const $ = cleanHtml(cheerio.load(html));
       
-      // Création/mise à jour de la page
+      // Création/mise à jour de la page avec le titre du lien
       const pageId = await createOrUpdatePage({
         title,
         htmlContent: $.html(),
