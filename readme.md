@@ -25,6 +25,6 @@ CONFLUENCE_BASE_URL=https://your-instance.atlassian.net/wiki/  # your target con
 AUTH_EMAIL=user@mail.com       # user
 API_TOKEN=                     # confluence api token
 SPACE_KEY=my_space             # confluence space to import to
-HTML_FOLDER_PATH='./output'    # local source folder to import
+HTML_FOLDER_PATH='./source'    # local source folder to import
 PARENT_PAGE_ID=                # optional parent page
 ```
