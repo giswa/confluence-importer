@@ -1,107 +1,107 @@
 # Confluence HTML Importer
 
-Outil Node.js pour importer des fichiers HTML vers Confluence Cloud avec gestion des images, liens et fichiers joints.
+Node.js tool to import HTML files to Confluence Cloud with automatic handling of images, links, and file attachments.
 
-## Prérequis
+## Prerequisites
 
-- Node.js (version 14 ou supérieure)
-- Dépendances npm : `axios`, `cheerio`, `form-data`, `dotenv`
+- Node.js (version 14 or higher)
+- npm dependencies: `axios`, `cheerio`, `form-data`, `dotenv`
 
 ## Configuration
 
-Créez un fichier `.env` à la racine du projet avec les variables suivantes :
+Create a `.env` file at the project root with the following variables:
 
 ```env
-# Configuration Confluence (OBLIGATOIRE)
-CONFLUENCE_BASE_URL=https://votre-domaine.atlassian.net
-AUTH_EMAIL=votre-email@domaine.com
-API_TOKEN=votre-api-token
-SPACE_KEY=CLE_DE_VOTRE_ESPACE
+# Confluence Configuration (REQUIRED)
+CONFLUENCE_BASE_URL=https://your-domain.atlassian.net
+AUTH_EMAIL=your-email@domain.com
+API_TOKEN=your-api-token
+SPACE_KEY=YOUR_SPACE_KEY
 
-# Configuration import (OBLIGATOIRE)
-HTML_FOLDER_PATH=./chemin/vers/vos/fichiers/html
+# Import Configuration (REQUIRED)
+HTML_FOLDER_PATH=./path/to/your/html/files
 
-# Configuration optionnelle
-PARENT_PAGE_ID=123456789  # ID de la page parent (optionnel)
+# Optional Configuration
+PARENT_PAGE_ID=123456789  # Parent page ID (optional)
 ```
 
-### Comment obtenir vos identifiants Confluence :
+### How to obtain your Confluence credentials:
 
-1. **API Token** : Générez un token depuis [https://id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
-2. **SPACE_KEY** : Visible dans l'URL de votre espace Confluence
-3. **PARENT_PAGE_ID** : ID de la page sous laquelle créer les nouvelles pages (optionnel)
+1. **API Token**: Generate a token from [https://id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+2. **SPACE_KEY**: Visible in your Confluence space URL
+3. **PARENT_PAGE_ID**: ID of the page under which to create new pages (optional)
 
-## Options d'exécution
+## Execution Options
 
-### Exécution standard
+### Standard execution
 ```bash
 node main.js
 ```
 
-### Options en ligne de commande
+### Command-line options
 
 #### `--dry-run`
-Mode simulation sans modification réelle dans Confluence.
+Simulation mode without actual modifications in Confluence.
 ```bash
 node main.js --dry-run
 ```
-- Simule toutes les opérations
-- Affiche les actions qui seraient effectuées
-- Aucune page/fichier n'est créé ou modifié
-- Idéal pour tester avant l'import réel
+- Simulates all operations
+- Shows what actions would be performed
+- No pages/files are created or modified
+- Ideal for testing before actual import
 
 #### `--limit=N`
-Limite le nombre de fichiers HTML à traiter.
+Limits the number of HTML files to process.
 ```bash
 node main.js --limit=5
 ```
-- Traite seulement les N premiers fichiers HTML trouvés
-- Utile pour les tests ou imports partiels
-- Sans cette option, tous les fichiers .html du dossier sont traités
+- Processes only the first N HTML files found
+- Useful for testing or partial imports
+- Without this option, all .html files in the folder are processed
 
-#### `--log=chemin/vers/fichier.csv`
-Génère un fichier CSV avec le journal détaillé des opérations.
+#### `--log=path/to/file.csv`
+Generates a CSV file with detailed operation log.
 ```bash
 node main.js --log=import_log.csv
 ```
-- Crée un fichier CSV avec les colonnes : Page, Action, Détail, URL
-- Contient toutes les actions effectuées pendant l'import
-- Pratique pour le suivi et l'audit
+- Creates a CSV file with columns: Page, Action, Detail, URL
+- Contains all actions performed during import
+- Useful for tracking and auditing
 
-### Combinaison d'options
+### Combining options
 ```bash
-# Test avec 3 fichiers et génération d'un log
+# Test with 3 files and log generation
 node main.js --dry-run --limit=3 --log=test_log.csv
 
-# Import réel limité à 10 fichiers avec log
+# Real import limited to 10 files with log
 node main.js --limit=10 --log=production_log.csv
 ```
 
-## Fonctionnalités du programme
+## Program Features
 
-### Traitement automatique
-- **Pages** : Création ou mise à jour automatique selon le titre
-- **Images** : Upload automatique vers Confluence et mise à jour des liens
-- **Fichiers joints** : Upload des fichiers (.pdf, .docx, .xlsx, .zip, .pptx, .txt, .csv)
-- **Liens internes** : Conversion automatique vers les liens Confluence
-- **Nettoyage HTML** : Suppression des styles, classes et métadonnées
+### Automatic Processing
+- **Pages**: Automatic creation or update based on title
+- **Images**: Automatic upload to Confluence and link updates
+- **File attachments**: Upload of files (.pdf, .docx, .xlsx, .zip, .pptx, .txt, .csv)
+- **Internal links**: Automatic conversion to Confluence links
+- **HTML cleanup**: Removal of styles, classes, and metadata
 
-### Gestion des erreurs
-- Retry automatique avec backoff exponentiel
-- Gestion du rate limiting Confluence
-- Logs détaillés pour le débogage
-- Validation des variables d'environnement
+### Error Handling
+- Automatic retry with exponential backoff
+- Confluence rate limiting management
+- Detailed logs for debugging
+- Environment variable validation
 
-### Rapports générés
-Le programme génère automatiquement dans Confluence :
-1. **Rapport d'import** : Détail de toutes les opérations effectuées
-2. **Index des pages** : Liste des pages créées avec liens directs
+### Generated Reports
+The program automatically generates in Confluence:
+1. **Import Report**: Details of all operations performed
+2. **Page Index**: List of created pages with direct links
 
-## Structure attendue des fichiers
+## Expected File Structure
 
 ```
 HTML_FOLDER_PATH/
-├── index.html          # OBLIGATOIRE - Page d'accueil principale
+├── index.html          # REQUIRED - Main landing page
 ├── page1.html
 ├── page2.html
 ├── images/
@@ -112,38 +112,38 @@ HTML_FOLDER_PATH/
     └── doc2.docx
 ```
 
-**Important** : Le fichier `index.html` doit être présent dans le dossier `HTML_FOLDER_PATH`
+**Important**: The `index.html` file must be present in the `HTML_FOLDER_PATH` folder
 
-## Exemples d'utilisation
+## Usage Examples
 
-### Test initial
+### Initial test
 ```bash
-# Vérifier la configuration avec 1 fichier
+# Check configuration with 1 file
 node main.js --dry-run --limit=1
 ```
 
-### Import de test
+### Test import
 ```bash
-# Import réel d'un petit échantillon
+# Real import of a small sample
 node main.js --limit=5 --log=test_import.csv
 ```
 
-### Import complet
+### Full import
 ```bash
-# Import de tous les fichiers avec log
+# Import all files with log
 node main.js --log=full_import.csv
 ```
 
-## Dépannage
+## Troubleshooting
 
-### Erreurs communes
-- **Variables d'environnement manquantes** : Vérifiez votre fichier `.env`
-- **Dossier HTML introuvable** : Vérifiez le chemin `HTML_FOLDER_PATH`
-- **Fichier index.html manquant** : Assurez-vous qu'un fichier `index.html` existe dans `HTML_FOLDER_PATH`
-- **Erreurs d'authentification** : Vérifiez votre `API_TOKEN` et `AUTH_EMAIL`
-- **Rate limiting** : Le programme gère automatiquement avec des pauses
+### Common errors
+- **Missing environment variables**: Check your `.env` file
+- **HTML folder not found**: Check the `HTML_FOLDER_PATH` path
+- **Missing index.html file**: Make sure an `index.html` file exists in `HTML_FOLDER_PATH`
+- **Authentication errors**: Check your `API_TOKEN` and `AUTH_EMAIL`
+- **Rate limiting**: The program handles this automatically with pauses
 
-### Logs utiles
-- Tous les événements sont affichés en temps réel dans la console
-- Utilisez `--log` pour conserver un historique permanent
-- Les erreurs détaillées incluent les réponses de l'API Confluence
+### Useful logs
+- All events are displayed in real-time in the console
+- Use `--log` to maintain a permanent history
+- Detailed errors include Confluence API responses
