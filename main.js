@@ -6,7 +6,7 @@ const FormData = require('form-data');
 
 require('dotenv').config();
 
-// === VALIDATION DES VARIABLES D'ENVIRONNEMENT ===
+// === ENVIRONMENT VARIABLES VALIDATION ===
 const {
   CONFLUENCE_BASE_URL,
   AUTH_EMAIL,
@@ -17,20 +17,20 @@ const {
 } = process.env;
 
 if (!CONFLUENCE_BASE_URL || !AUTH_EMAIL || !API_TOKEN || !SPACE_KEY) {
-  console.error('❌ Variables d\'environnement manquantes. Vérifiez votre fichier .env');
-  console.error('Requis: CONFLUENCE_BASE_URL, AUTH_EMAIL, API_TOKEN, SPACE_KEY');
+  console.error('❌ Missing environment variables. Check your .env file');
+  console.error('Required: CONFLUENCE_BASE_URL, AUTH_EMAIL, API_TOKEN, SPACE_KEY');
   process.exit(1);
 }
 
 if (!HTML_FOLDER_PATH || !fs.existsSync(HTML_FOLDER_PATH)) {
-  console.error('❌ Dossier HTML_FOLDER_PATH introuvable:', HTML_FOLDER_PATH);
+  console.error('❌ HTML_FOLDER_PATH folder not found:', HTML_FOLDER_PATH);
   process.exit(1);
 }
 
 const API_ENDPOINT = `${CONFLUENCE_BASE_URL}/rest/api/content`;
 
-// SUPPRIMÉ: console.log(API_TOKEN) - SÉCURITÉ !
-console.log('✅ Configuration validée');
+// REMOVED: console.log(API_TOKEN) - SECURITY!
+console.log('✅ Configuration validated');
 
 // === CLI OPTIONS ===
 const args = process.argv.slice(2);
@@ -40,7 +40,7 @@ const LOG_PATH = (args.find(arg => arg.startsWith('--log=')) || '').split('=')[1
 
 const downloadableExtensions = ['.pdf', '.docx', '.xlsx', '.zip', '.pptx', '.txt', '.csv'];
 
-// === UTILITAIRES ===
+// === UTILITIES ===
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // === LOGGING ===
@@ -50,24 +50,24 @@ function logEvent(page, action, detail = '', pageUrl = '') {
   console.log(`📝 ${page}: ${action} ${detail ? '- ' + detail : ''}`);
 }
 
-// === GESTION D'ERREURS AXIOS ===
+// === AXIOS ERROR HANDLING ===
 async function safeAxiosCall(axiosCall, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
       return await axiosCall();
     } catch (error) {
       if (error.response?.status === 429) {
-        const waitTime = Math.pow(2, i) * 1000; // Backoff exponentiel
-        console.log(`⏸️ Rate limit atteint, attente ${waitTime}ms...`);
+        const waitTime = Math.pow(2, i) * 1000; // Exponential backoff
+        console.log(`⏸️ Rate limit reached, waiting ${waitTime}ms...`);
         await delay(waitTime);
         continue;
       }
       
       if (i === retries - 1) {
-        throw error; // Dernière tentative, on lance l'erreur
+        throw error; // Last attempt, throw error
       }
       
-      console.log(`⚠️ Tentative ${i + 1}/${retries} échouée, retry...`);
+      console.log(`⚠️ Attempt ${i + 1}/${retries} failed, retrying...`);
       await delay(1000);
     }
   }
@@ -83,9 +83,9 @@ function generateReportHtml(logs) {
     </tr>
   `).join('');
   return `
-    <p>Généré le ${new Date().toLocaleString()}</p>
+    <p>Generated on ${new Date().toLocaleString()}</p>
     <table border="1" style="border-collapse: collapse; width: 100%;">
-      <tr style="background-color: #f5f5f5;"><th>Page</th><th>Action</th><th>Détail</th></tr>
+      <tr style="background-color: #f5f5f5;"><th>Page</th><th>Action</th><th>Detail</th></tr>
       ${rows}
     </table>
   `;
@@ -94,7 +94,7 @@ function generateReportHtml(logs) {
 // === INDEX PAGE ===
 function generateIndexHtml(logs) {
   const uniquePages = logs
-    .filter(l => l.pageUrl && l.action === 'Créée')
+    .filter(l => l.pageUrl && l.action === 'Created')
     .reduce((acc, curr) => {
       if (!acc.find(p => p.page === curr.page)) acc.push(curr);
       return acc;
@@ -105,7 +105,7 @@ function generateIndexHtml(logs) {
   ).join('\n');
 
   return `
-    <p>Généré le ${new Date().toLocaleString()}</p>
+    <p>Generated on ${new Date().toLocaleString()}</p>
     <ul>
       ${listItems}
     </ul>
@@ -125,15 +125,15 @@ async function getPageByTitle(title) {
     
     return response.data.results[0] || null;
   } catch (error) {
-    console.error(`❌ Erreur recherche page "${title}":`, error.response?.data || error.message);
+    console.error(`❌ Error searching page "${title}":`, error.response?.data || error.message);
     return null;
   }
 }
 
-// === CREATE OR UPDATE PAGE (CORRIGÉE) ===
+// === CREATE OR UPDATE PAGE (FIXED) ===
 async function createOrUpdatePage({ title, htmlContent, parentId }) {
   if (DRY_RUN) {
-    logEvent(title, 'Simulée (dry-run)', '');
+    logEvent(title, 'Simulated (dry-run)', '');
     return `dry-${title}`;
   }
 
@@ -141,7 +141,7 @@ async function createOrUpdatePage({ title, htmlContent, parentId }) {
     const existingPage = await getPageByTitle(title);
     
     if (existingPage) {
-      // Mise à jour de la page existante
+      // Update existing page
       const newVersion = existingPage.version.number + 1;
       
       const response = await safeAxiosCall(() =>
@@ -163,11 +163,11 @@ async function createOrUpdatePage({ title, htmlContent, parentId }) {
       );
       
       const pageUrl = `${CONFLUENCE_BASE_URL}/pages/${existingPage.id}`;
-      logEvent(title, 'Mise à jour', `Version ${newVersion}`, pageUrl);
+      logEvent(title, 'Updated', `Version ${newVersion}`, pageUrl);
       return existingPage.id;
       
     } else {
-      // Création d'une nouvelle page
+      // Create new page
       const response = await safeAxiosCall(() =>
         axios.post(API_ENDPOINT, {
           type: 'page',
@@ -188,13 +188,13 @@ async function createOrUpdatePage({ title, htmlContent, parentId }) {
       
       const pageId = response.data.id;
       const pageUrl = `${CONFLUENCE_BASE_URL}/pages/${pageId}`;
-      logEvent(title, 'Créée', `ID ${pageId}`, pageUrl);
+      logEvent(title, 'Created', `ID ${pageId}`, pageUrl);
       return pageId;
     }
     
   } catch (error) {
-    console.error(`❌ Erreur création/mise à jour "${title}":`, error.response?.data || error.message);
-    logEvent(title, 'Erreur', error.message);
+    console.error(`❌ Error creating/updating "${title}":`, error.response?.data || error.message);
+    logEvent(title, 'Error', error.message);
     return null;
   }
 }
@@ -212,7 +212,7 @@ async function getAttachmentById(attachmentId) {
     
     return response.data;
   } catch (error) {
-    console.error(`❌ Erreur récupération attachement ${attachmentId}:`, error.message);
+    console.error(`❌ Error fetching attachment ${attachmentId}:`, error.message);
     return null;
   }
 }
@@ -252,14 +252,14 @@ async function updateAttachment(pageId, attachmentId, filePath, fileName) {
       })
     );
     
-    // La structure de réponse pour mise à jour est différente
+    // Response structure for update is different
     let downloadLink;
     if (response.data.results && response.data.results[0]) {
       downloadLink = response.data.results[0]._links.download;
     } else if (response.data._links && response.data._links.download) {
       downloadLink = response.data._links.download;
     } else {
-      // Fallback : récupérer l'attachement mis à jour
+      // Fallback: fetch updated attachment
       const updatedAttachment = await getAttachmentById(attachmentId);
       downloadLink = updatedAttachment?._links?.download;
     }
@@ -267,36 +267,36 @@ async function updateAttachment(pageId, attachmentId, filePath, fileName) {
     if (downloadLink) {
       return downloadLink.startsWith('http') ? downloadLink : `${CONFLUENCE_BASE_URL}${downloadLink}`;
     } else {
-      console.error(`❌ Impossible de récupérer le lien de téléchargement pour ${fileName}`);
+      console.error(`❌ Unable to retrieve download link for ${fileName}`);
       return null;
     }
     
   } catch (error) {
-    console.error(`❌ Erreur mise à jour ${fileName}:`, error.response?.data || error.message);
+    console.error(`❌ Error updating ${fileName}:`, error.response?.data || error.message);
     return null;
   }
 }
 
-// === UPLOAD FILE (CORRIGÉE POUR GESTION DOUBLONS) ===
+// === UPLOAD FILE (FIXED FOR DUPLICATE HANDLING) ===
 async function uploadAttachment(pageId, filePath, fileName) {
   if (DRY_RUN) {
     return `https://dummy.url/${fileName}`;
   }
 
   if (!pageId || pageId.startsWith('dry-')) {
-    console.error(`❌ ID de page invalide pour upload ${fileName}`);
+    console.error(`❌ Invalid page ID for upload ${fileName}`);
     return null;
   }
 
   try {
-    // Vérifier si le fichier existe déjà
+    // Check if file already exists
     const existingAttachment = await getExistingAttachment(pageId, fileName);
     
     if (existingAttachment) {
-      console.log(`🔄 Mise à jour de l'attachement existant: ${fileName}`);
+      console.log(`🔄 Updating existing attachment: ${fileName}`);
       return await updateAttachment(pageId, existingAttachment.id, filePath, fileName);
     } else {
-      // Créer un nouvel attachement
+      // Create new attachment
       const url = `${CONFLUENCE_BASE_URL}/rest/api/content/${pageId}/child/attachment`;
       const form = new FormData();
       form.append('file', fs.createReadStream(filePath), fileName);
@@ -312,12 +312,12 @@ async function uploadAttachment(pageId, filePath, fileName) {
       );
       
       const downloadLink = response.data.results[0]._links.download;
-      console.log(`✅ Nouvel attachement créé: ${fileName}`);
+      console.log(`✅ New attachment created: ${fileName}`);
       return `${CONFLUENCE_BASE_URL}${downloadLink}`;
     }
     
   } catch (error) {
-    console.error(`❌ Erreur upload ${fileName}:`, error.response?.data || error.message);
+    console.error(`❌ Error uploading ${fileName}:`, error.response?.data || error.message);
     return null;
   }
 }
@@ -336,7 +336,7 @@ function cleanHtml($) {
 
 // === PROCESS IMAGES AND LINKS ===
 async function processImagesAndLinks($, title, basePath, pageId) {
-  // Traitement des images
+  // Process images
   const imgTags = $('img');
   for (const img of imgTags.toArray()) {
     const src = $(img).attr('src');
@@ -346,20 +346,20 @@ async function processImagesAndLinks($, title, basePath, pageId) {
     const fileName = path.basename(src);
     
     if (!fs.existsSync(fullPath)) {
-      logEvent(title, 'Image manquante', src);
+      logEvent(title, 'Missing image', src);
       continue;
     }
     
     const uploadedUrl = await uploadAttachment(pageId, fullPath, fileName);
     if (uploadedUrl) {
       $(img).attr('src', uploadedUrl);
-      logEvent(title, 'Image uploadée', fileName);
+      logEvent(title, 'Image uploaded', fileName);
     }
   }
 
-  // Traitement des liens
+  // Process links
   const anchorTags = $('a');
-  const pageMap = getPageMap(); // Fonction helper pour récupérer la map des pages
+  const pageMap = getPageMap(); // Helper function to get page map
   
   for (const el of anchorTags.toArray()) {
     const href = $(el).attr('href');
@@ -369,7 +369,7 @@ async function processImagesAndLinks($, title, basePath, pageId) {
     const ext = path.extname(href).toLowerCase();
     
     if (pageMap[href]) {
-      // Lien vers une autre page
+      // Link to another page
       const linkedTitle = pageMap[href];
       const confluenceLink = `
         <ac:link>
@@ -378,25 +378,25 @@ async function processImagesAndLinks($, title, basePath, pageId) {
         </ac:link>
       `;
       $(el).replaceWith(confluenceLink);
-      logEvent(title, 'Lien page modifié', linkedTitle);
+      logEvent(title, 'Page link modified', linkedTitle);
       
     } else if (downloadableExtensions.includes(ext)) {
-      // Fichier téléchargeable
+      // Downloadable file
       const filePath = path.resolve(basePath, href);
       if (fs.existsSync(filePath)) {
         const uploadedUrl = await uploadAttachment(pageId, filePath, path.basename(href));
         if (uploadedUrl) {
           $(el).attr('href', uploadedUrl);
-          logEvent(title, 'Fichier uploadé', href);
+          logEvent(title, 'File uploaded', href);
         }
       } else {
-        logEvent(title, 'Fichier manquant', href);
+        logEvent(title, 'Missing file', href);
       }
     }
   }
 }
 
-// === HELPER FUNCTION - MODIFIÉE POUR LIRE INDEX.HTML ===
+// === HELPER FUNCTION ===
 function getPageMap() {
   const indexPath = path.join(HTML_FOLDER_PATH, 'index.html');
   
@@ -427,13 +427,13 @@ function getPageMap() {
   }
 }
 
-// === NOUVELLE FONCTION POUR EXTRAIRE LES FICHIERS DE INDEX.HTML ===
+// === EXTRACT FILES FROM INDEX.HTML ===
 function getHtmlFilesFromIndex() {
   const indexPath = path.join(HTML_FOLDER_PATH, 'index.html');
   
   if (!fs.existsSync(indexPath)) {
-    console.error('❌ Fichier index.html introuvable dans:', HTML_FOLDER_PATH);
-    console.error('💡 Veuillez créer un fichier index.html avec des liens vers vos pages HTML');
+    console.error('❌ Cannot find index.html in folder:', HTML_FOLDER_PATH);
+    console.error('💡 Please create index.html with a links to your HTML pages');
     return [];
   }
   
@@ -442,7 +442,7 @@ function getHtmlFilesFromIndex() {
     const $ = cheerio.load(indexHtml);
     const htmlFiles = [];
     
-    console.log('🔍 Analyse du fichier index.html...');
+    console.log('🔍 Analysing index.html...');
     
     $('a').each((_, element) => {
       const href = $(element).attr('href');
@@ -452,35 +452,35 @@ function getHtmlFilesFromIndex() {
         const fullPath = path.join(HTML_FOLDER_PATH, href);
         
         if (fs.existsSync(fullPath)) {
-          // Retourner un objet avec le fichier et le titre
+          // Return objet containing file and title
           htmlFiles.push({ 
             file: href, 
-            title: linkText || path.basename(href, '.html') // Fallback au nom de fichier si pas de texte
+            title: linkText || path.basename(href, '.html') // Fallback to file name if no title was found
           });
-          console.log(`✅ Fichier trouvé: ${href} → "${linkText}"`);
+          console.log(`✅ File found: ${href} → "${linkText}"`);
         } else {
-          console.warn(`⚠️ Fichier référencé mais introuvable: ${href} (${linkText})`);
+          console.warn(`⚠️ Cannot find file: ${href} (${linkText})`);
         }
       }
     });
     
     if (htmlFiles.length === 0) {
-      console.warn('⚠️ Aucun lien vers des fichiers .html trouvé dans index.html');
-      console.log('💡 Assurez-vous que votre index.html contient des liens comme: <a href="monpage.html">Mon Page</a>');
+      console.warn('⚠️ No linked html found in file index.html');
+      console.log('💡 Please ensure index.html contains links: <a href="page.html">My Page</a>');
     }
     
     return htmlFiles;
     
   } catch (error) {
-    console.error('❌ Erreur lecture index.html:', error.message);
+    console.error('❌ Error while reading index.html:', error.message);
     return [];
   }
 }
 
-// === MAIN FUNCTION (MODIFIÉE POUR LIRE INDEX.HTML) ===
+// === MAIN FUNCTION ===
 async function importHtmlFiles() {
-  console.log('🚀 Début de l\'import...');
-  
+  console.log('🚀 Starting import...');
+ 
   // CHANGEMENT PRINCIPAL: utiliser getHtmlFilesFromIndex() au lieu de fs.readdirSync()
   const allFilesData = getHtmlFilesFromIndex().slice(0, LIMIT);
     
@@ -489,10 +489,10 @@ async function importHtmlFiles() {
     process.exit(1);
   }
   
-  console.log(`📊 ${allFilesData.length} fichiers à traiter (depuis index.html)`);
+  console.log(`📊 ${allFilesData.length} files to process`);
   
   if (DRY_RUN) {
-    console.log('🔍 Mode DRY RUN activé - aucune modification ne sera effectuée');
+    console.log('🔍 DRY RUN mode enabled - no modifications will be made');
   }
 
   let counter = 0;
@@ -504,11 +504,11 @@ async function importHtmlFiles() {
     console.log(`\n📄 (${counter}/${allFilesData.length}) Traitement: "${title}" (${file})`);
     
     try {
-      // Lecture et nettoyage du HTML
+      // Read and clean HTML
       const html = fs.readFileSync(filePath, 'utf-8');
       const $ = cleanHtml(cheerio.load(html));
       
-      // Création/mise à jour de la page avec le titre du lien
+      // Create/update page
       const pageId = await createOrUpdatePage({
         title,
         htmlContent: $.html(),
@@ -516,14 +516,14 @@ async function importHtmlFiles() {
       });
       
       if (!pageId) {
-        console.error(`❌ Échec création page ${title}, passage au suivant`);
+        console.error(`❌ Failed to create page ${title}, skipping`);
         continue;
       }
       
-      // Traitement des images et liens
+      // Process images and links
       await processImagesAndLinks($, title, HTML_FOLDER_PATH, pageId);
       
-      // Mise à jour finale avec le contenu modifié (images/liens)
+      // Final update with modified content (images/links)
       if (!DRY_RUN && pageId && !pageId.startsWith('dry-')) {
         await createOrUpdatePage({
           title,
@@ -532,55 +532,55 @@ async function importHtmlFiles() {
         });
       }
       
-      console.log(`✅ ${title} terminé`);
+      console.log(`✅ ${title} completed`);
       
     } catch (error) {
-      console.error(`❌ Erreur traitement ${title}:`, error.message);
-      logEvent(title, 'Erreur fatale', error.message);
+      console.error(`❌ Error processing ${title}:`, error.message);
+      logEvent(title, 'Fatal error', error.message);
     }
     
-    // Rate limiting - pause entre chaque page
+    // Rate limiting - pause between each page
     await delay(200);
   }
 
-  // === GÉNÉRATION DES RAPPORTS ===
-  console.log('\n📋 Génération des rapports...');
+  // === REPORT GENERATION ===
+  console.log('\n📋 Generating reports...');
   
-  // Écriture du log CSV
+  // Write CSV log
   if (LOG_PATH) {
-    const csv = 'Page,Action,Détail,URL\n' +
+    const csv = 'Page,Action,Detail,URL\n' +
       logs.map(l => `"${l.page}","${l.action}","${l.detail}","${l.pageUrl}"`).join('\n');
     fs.writeFileSync(LOG_PATH, csv);
-    console.log(`🧾 Journal CSV écrit: ${LOG_PATH}`);
+    console.log(`🧾 CSV log written: ${LOG_PATH}`);
   }
 
-  // Rapport HTML dans Confluence
+  // HTML report in Confluence
   if (!DRY_RUN) {
     await createOrUpdatePage({
-      title: `Rapport d'import du ${new Date().toLocaleDateString()}`,
+      title: `Import Report ${new Date().toLocaleDateString()}`,
       htmlContent: generateReportHtml(logs),
       parentId: PARENT_PAGE_ID,
     });
 
     await createOrUpdatePage({
-      title: `Index des pages importées du ${new Date().toLocaleDateString()}`,
+      title: `Imported Pages Index ${new Date().toLocaleDateString()}`,
       htmlContent: generateIndexHtml(logs),
       parentId: PARENT_PAGE_ID,
     });
   }
   
-  console.log('\n🎉 Import terminé !');
-  console.log(`📊 Résumé: ${logs.filter(l => l.action === 'Créée').length} créées, ${logs.filter(l => l.action === 'Mise à jour').length} mises à jour`);
+  console.log('\n🎉 Import completed!');
+  console.log(`📊 Summary: ${logs.filter(l => l.action === 'Created').length} created, ${logs.filter(l => l.action === 'Updated').length} updated`);
 }
 
-// === GESTION D'ERREURS GLOBALES ===
+// === GLOBAL ERROR HANDLING ===
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Erreur non gérée:', reason);
+  console.error('❌ Unhandled error:', reason);
   process.exit(1);
 });
 
 // === EXECUTION ===
 importHtmlFiles().catch(err => {
-  console.error('💥 Erreur fatale:', err.message);
+  console.error('💥 Fatal error:', err.message);
   process.exit(1);
 });
