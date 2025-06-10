@@ -322,17 +322,122 @@ async function uploadAttachment(pageId, filePath, fileName) {
   }
 }
 
-// === CLEAN HTML ===
+
+// === CLEAN HTML FOR XHTML OUTPUT ===
 function cleanHtml($) {
+  // Remove comments
   $('*').contents().each(function () {
     if (this.type === 'comment') $(this).remove();
   });
+  
+  // Remove unwanted elements
   $('script, style, meta, link, head').remove();
+  
+  // Remove unwanted attributes
   $('*').each((_, el) => {
     $(el).removeAttr('style class id');
   });
+  
+  // XHTML specific transformations
+  
+  // 1. Self-closing tags - ensure proper XHTML format
+  const selfClosingTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+  selfClosingTags.forEach(tagName => {
+    $(tagName).each((_, el) => {
+      const $el = $(el);
+      // Ensure self-closing tags end with " />"
+      if ($el.html() === null || $el.html() === '') {
+        // Cheerio handles this automatically when we use $.xml() instead of $.html()
+      }
+    });
+  });
+  
+  // 2. Convert attributes to lowercase (XHTML requirement)
+  $('*').each((_, el) => {
+    const $el = $(el);
+    const attributes = el.attribs || {};
+    
+    Object.keys(attributes).forEach(attr => {
+      if (attr !== attr.toLowerCase()) {
+        const value = attributes[attr];
+        $el.removeAttr(attr);
+        $el.attr(attr.toLowerCase(), value);
+      }
+    });
+  });
+  
+  // 3. Convert tag names to lowercase (XHTML requirement)
+  $('*').each((_, el) => {
+    const tagName = el.tagName || el.name;
+    if (tagName && tagName !== tagName.toLowerCase()) {
+      const $el = $(el);
+      const html = $el.html();
+      const attributes = el.attribs || {};
+      
+      // Create new element with lowercase tag name
+      const newEl = $(`<${tagName.toLowerCase()}>`);
+      
+      // Copy attributes
+      Object.keys(attributes).forEach(attr => {
+        newEl.attr(attr, attributes[attr]);
+      });
+      
+      // Set content
+      newEl.html(html);
+      
+      // Replace old element
+      $el.replaceWith(newEl);
+    }
+  });
+  
+  // 4. Ensure boolean attributes are properly formatted for XHTML
+  // In XHTML, boolean attributes must have values equal to their names
+  const booleanAttributes = ['checked', 'selected', 'disabled', 'readonly', 'multiple', 'autofocus', 'autoplay', 'controls', 'defer', 'hidden', 'loop', 'open', 'required', 'reversed'];
+  
+  $('*').each((_, el) => {
+    const $el = $(el);
+    booleanAttributes.forEach(attr => {
+      if ($el.attr(attr) !== undefined) {
+        $el.attr(attr, attr); // Set value equal to attribute name
+      }
+    });
+  });
+  
+  // 5. Ensure all attributes are quoted (handled by Cheerio by default)
+  
+  // 6. Add xml namespace if not present (optional, for strict XHTML)
+  // This would typically be done at the document level
+  
   return $;
 }
+
+// // Alternative version that returns XHTML string directly
+// function cleanHtmlToXhtml(htmlContent) {
+//   const $ = cheerio.load(htmlContent, {
+//     xmlMode: true, // This enables XML mode for better XHTML compliance
+//     decodeEntities: false
+//   });
+  
+//   // Apply the same cleaning logic
+//   const cleaned$ = cleanHtml($);
+  
+//   // Return as XML (XHTML) instead of HTML
+//   // This ensures self-closing tags are properly formatted
+//   return cleaned$.xml();
+// }
+
+// // === CLEAN HTML ===
+// function cleanHtml($) {
+//   $('*').contents().each(function () {
+//     if (this.type === 'comment') $(this).remove();
+//   });
+//   $('script, style, meta, link, head').remove();
+//   $('*').each((_, el) => {
+//     $(el).removeAttr('style class id');
+//   });
+//   return $;
+// }
+
 
 // === PROCESS IMAGES AND LINKS ===
 async function processImagesAndLinks($, title, basePath, pageId) {
@@ -517,7 +622,7 @@ async function importHtmlFiles() {
     try {
       // Read and clean HTML
       const html = fs.readFileSync(filePath, 'utf-8');
-      const $ = cleanHtml(cheerio.load(html));
+      const $ = cleanHtml(cheerio.load(html, { xmlMode: true }));
       
       // Create/update page
       const pageId = await createOrUpdatePage({
