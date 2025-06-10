@@ -29,6 +29,9 @@ if (!HTML_FOLDER_PATH || !fs.existsSync(HTML_FOLDER_PATH)) {
 
 const API_ENDPOINT = `${CONFLUENCE_BASE_URL}/rest/api/content`;
 
+// === STATE MANAGEMENT ===
+const STATE_FILE = path.join(HTML_FOLDER_PATH, 'transfer-state.json');
+
 // REMOVED: console.log(API_TOKEN) - SECURITY!
 console.log('✅ Configuration validated');
 
@@ -582,8 +585,6 @@ async function importHtmlFiles() {
   console.log(`📊 Summary: ${logs.filter(l => l.action === 'Created').length} created, ${logs.filter(l => l.action === 'Updated').length} updated`);
 }
 
-// === STATE MANAGEMENT ===
-const STATE_FILE = path.join(__dirname, 'transfer-state.json');
 
 function loadState() {
   if (fs.existsSync(STATE_FILE)) {
