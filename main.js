@@ -556,7 +556,7 @@ function getHtmlFilesFromIndex() {
   try {
     const indexHtml = fs.readFileSync(indexPath, 'utf-8');
     const $ = cheerio.load(indexHtml);
-    const htmlFiles = [];
+    const htmlFiles = [{file: 'index.html', title: 'Index Page'}]; // Start with index.html
     
     console.log('🔍 Analysing index.html...');
     
@@ -670,21 +670,6 @@ async function importHtmlFiles() {
     console.log(`🧾 CSV log written: ${LOG_PATH}`);
   }
 
-  // HTML report in Confluence
-  if (!DRY_RUN) {
-    await createOrUpdatePage({
-      title: `Import Report ${new Date().toLocaleDateString()}`,
-      htmlContent: generateReportHtml(logs),
-      parentId: PARENT_PAGE_ID,
-    });
-
-    await createOrUpdatePage({
-      title: `Imported Pages Index ${new Date().toLocaleDateString()}`,
-      htmlContent: generateIndexHtml(logs),
-      parentId: PARENT_PAGE_ID,
-    });
-  }
-  
   console.log('\n🎉 Import completed!');
   console.log(`📊 Summary: ${logs.filter(l => l.action === 'Created').length} created, ${logs.filter(l => l.action === 'Updated').length} updated`);
 }
