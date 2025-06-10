@@ -29,6 +29,9 @@ if (!HTML_FOLDER_PATH || !fs.existsSync(HTML_FOLDER_PATH)) {
 
 const API_ENDPOINT = `${CONFLUENCE_BASE_URL}/rest/api/content`;
 
+// === STATE MANAGEMENT ===
+const STATE_FILE = path.join(HTML_FOLDER_PATH, 'transfer-state.json');
+
 // REMOVED: console.log(API_TOKEN) - SECURITY!
 console.log('✅ Configuration validated');
 
@@ -596,10 +599,11 @@ function getHtmlFilesFromIndex() {
 // === MAIN FUNCTION ===
 async function importHtmlFiles() {
   console.log('🚀 Starting import...');
- 
-  // CHANGEMENT PRINCIPAL: utiliser getHtmlFilesFromIndex() au lieu de fs.readdirSync()
+
+  const state = loadState();
+
   const allFilesData = getHtmlFilesFromIndex().slice(0, LIMIT);
-    
+
   if (allFilesData.length === 0) {
     console.error('❌ Aucun fichier HTML à traiter. Vérifiez votre fichier index.html');
     process.exit(1);
@@ -613,8 +617,12 @@ async function importHtmlFiles() {
 
   let counter = 0;
   for (const fileData of allFilesData) {
-    counter++;
     const { file, title } = fileData;
+    if (state.transferred.includes(file)) {
+      console.log(`⏩ Skip (already transferred): "${title}" (${file})`);
+      continue;
+    }
+    counter++;
     const filePath = path.join(HTML_FOLDER_PATH, file);
     
     console.log(`\n📄 (${counter}/${allFilesData.length}) Traitement: "${title}" (${file})`);
@@ -647,7 +655,11 @@ async function importHtmlFiles() {
           parentId: PARENT_PAGE_ID
         });
       }
-      
+
+      // Add to the transfered file list
+      state.transferred.push(file);
+      saveState(state);
+
       console.log(`✅ ${title} completed`);
       
     } catch (error) {
@@ -672,6 +684,23 @@ async function importHtmlFiles() {
 
   console.log('\n🎉 Import completed!');
   console.log(`📊 Summary: ${logs.filter(l => l.action === 'Created').length} created, ${logs.filter(l => l.action === 'Updated').length} updated`);
+}
+
+
+function loadState() {
+  if (fs.existsSync(STATE_FILE)) {
+    try {
+      return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+    } catch (e) {
+      console.warn('⚠️ Could not read resume file, it will be reset.');
+      return { transferred: [] };
+    }
+  }
+  return { transferred: [] };
+}
+
+function saveState(state) {
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
 }
 
 // === GLOBAL ERROR HANDLING ===
