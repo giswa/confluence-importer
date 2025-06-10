@@ -355,6 +355,17 @@ async function processImagesAndLinks($, title, basePath, pageId) {
       $(img).attr('src', uploadedUrl);
       logEvent(title, 'Image uploaded', fileName);
     }
+
+    // change img tag to confluence format
+    const confluenceImg = `
+      <ac:image>
+        <ri:attachment ri:filename="${fileName}" />
+        <ac:plain-text-body><![CDATA[${fileName}]]></ac:plain-text-body>
+      </ac:image>
+    `;
+    $(img).replaceWith(confluenceImg);
+    logEvent(title, 'Image tag modified', fileName);
+
   }
 
   // Process links
