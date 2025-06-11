@@ -695,7 +695,7 @@ async function importHtmlFiles() {
     try {
       // Read and clean HTML
       const html = fs.readFileSync(filePath, 'utf-8');
-      const $ = cleanHtml(cheerio.load(html, { xmlMode: true }));
+      const $ = cleanHtml(cheerio.load(html, { xmlMode: true, decodeEntities: false }));
       
       // Create/update page
       const pageId = await createOrUpdatePage({
