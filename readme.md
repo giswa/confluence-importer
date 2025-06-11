@@ -42,13 +42,23 @@ node main.js
 ### Command-line options
 
 #### `--dry-run`
-Simulation mode without actual modifications in Confluence.
+Simulation mode without posting to Confluence.
 ```bash
 node main.js --dry-run
 ```
 - Simulates all operations
 - Shows what actions would be performed
 - No pages/files are created or modified
+- Ideal for testing before actual import
+
+#### `--dry-run-local`
+Simulation mode without posting to Confluence, but export to local folder
+```bash
+node main.js --dry-run-local
+```
+- Simulates all operations
+- Shows what actions would be performed
+- Export output results to file system
 - Ideal for testing before actual import
 
 #### `--limit=N`
