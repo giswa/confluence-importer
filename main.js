@@ -585,7 +585,7 @@ function getPageMap() {
   const indexPath = path.join(HTML_FOLDER_PATH, 'index.html');
   
   if (!fs.existsSync(indexPath)) {
-    console.error('❌ Fichier index.html introuvable dans:', HTML_FOLDER_PATH);
+    console.error('❌ Cannot find index.html in folder:', HTML_FOLDER_PATH);
     return {};
   }
   
@@ -670,7 +670,7 @@ async function importHtmlFiles() {
   const allFilesData = getHtmlFilesFromIndex().slice(0, LIMIT);
 
   if (allFilesData.length === 0) {
-    console.error('❌ Aucun fichier HTML à traiter. Vérifiez votre fichier index.html');
+    console.error('❌ Nothing to process. Check index.html');
     process.exit(1);
   }
   
