@@ -38,6 +38,7 @@ console.log('✅ Configuration validated');
 // === CLI OPTIONS ===
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
+const DRY_RUN_LOCAL = args.includes('--dry-run-local');
 const LIMIT = parseInt((args.find(arg => arg.startsWith('--limit=')) || '').split('=')[1]) || Infinity;
 const LOG_PATH = (args.find(arg => arg.startsWith('--log=')) || '').split('=')[1] || null;
 
@@ -45,6 +46,57 @@ const downloadableExtensions = ['.pdf', '.docx', '.xlsx', '.zip', '.pptx', '.txt
 
 // === UTILITIES ===
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// === DRY RUN LOCAL SETUP ===
+const DRY_RUN_OUTPUT_DIR = path.join(process.cwd(), 'dryrun-output');
+
+if (DRY_RUN_LOCAL) {
+  // Create dry-run output directory if it doesn't exist
+  if (!fs.existsSync(DRY_RUN_OUTPUT_DIR)) {
+    fs.mkdirSync(DRY_RUN_OUTPUT_DIR, { recursive: true });
+    console.log(`📁 Created folder for dry-run: ${DRY_RUN_OUTPUT_DIR}`);
+  }
+}
+
+// === DRY RUN LOCAL FUNCTIONS ===
+function saveDryRunFile(title, content, type = 'html') {
+  if (!DRY_RUN_LOCAL) return null;
+  
+  const sanitizedTitle = title.replace(/[<>:"/\\|?*]/g, '_');
+  const fileName = `${sanitizedTitle}.${type}`;
+  const filePath = path.join(DRY_RUN_OUTPUT_DIR, fileName);
+  
+  try {
+    fs.writeFileSync(filePath, content, 'utf-8');
+    console.log(`💾 Saved locally: ${fileName}`);
+    return filePath;
+  } catch (error) {
+    console.error(`❌ Saving failed for ${fileName}:`, error.message);
+    return null;
+  }
+}
+
+function copyDryRunAsset(srcPath, destName) {
+  if (!DRY_RUN_LOCAL || !fs.existsSync(srcPath)) return null;
+  
+  const destPath = path.join(DRY_RUN_OUTPUT_DIR, 'assets');
+  
+  // folder does not exist, create it
+  if (!fs.existsSync(destPath)) {
+    fs.mkdirSync(destPath, { recursive: true });
+  }
+  
+  const finalDestPath = path.join(destPath, destName);
+  
+  try {
+    fs.copyFileSync(srcPath, finalDestPath);
+    console.log(`📋 Asset saved: ${destName}`);
+    return `./assets/${destName}`;
+  } catch (error) {
+    console.error(`❌ Asset saving failed ${destName}:`, error.message);
+    return null;
+  }
+}
 
 // === LOGGING ===
 const logs = [];
@@ -133,11 +185,18 @@ async function getPageByTitle(title) {
   }
 }
 
-// === CREATE OR UPDATE PAGE (FIXED) ===
+// === CREATE OR UPDATE PAGE ===
 async function createOrUpdatePage({ title, htmlContent, parentId }) {
   if (DRY_RUN) {
     logEvent(title, 'Simulated (dry-run)', '');
     return `dry-${title}`;
+  }
+  
+  if (DRY_RUN_LOCAL) {
+    // Save the HTML content to a local file
+    const savedPath = saveDryRunFile(title, htmlContent, 'html');
+    logEvent(title, 'Dry-run local', savedPath ? `Saved: ${path.basename(savedPath)}` : 'Saving failed');
+    return `dry-local-${title}`;
   }
 
   try {
@@ -280,10 +339,16 @@ async function updateAttachment(pageId, attachmentId, filePath, fileName) {
   }
 }
 
-// === UPLOAD FILE (FIXED FOR DUPLICATE HANDLING) ===
+// === UPLOAD FILE ===
 async function uploadAttachment(pageId, filePath, fileName) {
   if (DRY_RUN) {
     return `https://dummy.url/${fileName}`;
+  }
+  
+  if (DRY_RUN_LOCAL) {
+    // copy file to dry-run output directory
+    const localPath = copyDryRunAsset(filePath, fileName);
+    return localPath || `./assets/${fileName}`;
   }
 
   if (!pageId || pageId.startsWith('dry-')) {
