@@ -13,7 +13,8 @@ Create a `.env` file at the project root with the following variables:
 
 ```env
 # Confluence Configuration (REQUIRED)
-CONFLUENCE_BASE_URL=https://your-domain.atlassian.net
+# Note that cloud version required /wiki suffix
+CONFLUENCE_BASE_URL=https://your-domain.atlassian.net/wiki
 AUTH_EMAIL=your-email@domain.com
 API_TOKEN=your-api-token
 SPACE_KEY=YOUR_SPACE_KEY
