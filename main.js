@@ -709,7 +709,7 @@ async function importHtmlFiles() {
     counter++;
     const filePath = path.join(HTML_FOLDER_PATH, file);
     
-    console.log(`\n📄 (${counter}/${allFilesData.length}) Traitement: "${title}" (${file})`);
+    console.log(`\n📄 (${counter}/${allFilesData.length}) Treating: "${title}" (${file})`);
     
     try {
       // Read and clean HTML
