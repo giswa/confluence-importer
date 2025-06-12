@@ -488,7 +488,14 @@ function cleanHtml($) {
   // 6. Add xml namespace if not present (optional, for strict XHTML)
   // This would typically be done at the document level
   
-  return $;
+  // Only return the <body> content, or all HTML if no <body> tag exists
+  if ($('body').length > 0) {
+    // Return a cheerio instance containing only the body children
+    return cheerio.load($('body').html() || '', { xmlMode: true, decodeEntities: false });
+  } else {
+    // No <body> tag, return the whole document as-is
+    return $;
+  }
 }
 
 // // Alternative version that returns XHTML string directly
