@@ -713,7 +713,7 @@ async function importHtmlFiles() {
       await processImagesAndLinks($, title, HTML_FOLDER_PATH, pageId);
       
       // Final update with modified content (images/links)
-      if (!DRY_RUN && pageId && !pageId.startsWith('dry-')) {
+      if ( pageId ) {
         await createOrUpdatePage({
           title,
           htmlContent: $.html(),
