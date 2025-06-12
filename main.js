@@ -9,6 +9,7 @@ require('dotenv').config();
 // === ENVIRONMENT VARIABLES VALIDATION ===
 const {
   CONFLUENCE_BASE_URL,
+  AUTH_EMAIL,
   API_TOKEN,
   SPACE_KEY,
   HTML_FOLDER_PATH,
@@ -105,10 +106,19 @@ function logEvent(page, action, detail = '', pageUrl = '') {
 
 // === AUTHENTICATION HEADERS HELPER ===
 function getAuthHeaders(additionalHeaders = {}) {
-  return {
-    'Authorization': `Bearer ${API_TOKEN}`,
-    ...additionalHeaders
-  };
+  if (AUTH_EMAIL) {
+    return {
+      // Basic Auth with email and API token
+      // alternate solution to: { username: AUTH_EMAIL, password: API_TOKEN },
+      'Authorization': `Basic ${Buffer.from(`${AUTH_EMAIL}:${API_TOKEN}`).toString('base64')}`,
+      ...additionalHeaders
+    };
+  }else {
+    return {
+      'Authorization': `Bearer ${API_TOKEN}`,
+      ...additionalHeaders
+    };
+  }
 }
 
 // === AXIOS ERROR HANDLING ===
