@@ -15,7 +15,6 @@ Create a `.env` file at the project root with the following variables:
 # Confluence Configuration (REQUIRED)
 # Note that cloud version required /wiki suffix
 CONFLUENCE_BASE_URL=https://your-domain.atlassian.net/wiki
-AUTH_EMAIL=your-email@domain.com
 API_TOKEN=your-api-token
 SPACE_KEY=YOUR_SPACE_KEY
 
@@ -23,8 +22,14 @@ SPACE_KEY=YOUR_SPACE_KEY
 HTML_FOLDER_PATH=./path/to/your/html/files
 
 # Optional Configuration
+AUTH_EMAIL=your-email@domain.com
 PARENT_PAGE_ID=123456789  # Parent page ID (optional)
 ```
+### Note on Authentication method
+
+Authentication will be made through Basic or Bearer method, depending if AUTH_EMAIL is set (Note the AUTH_EMAIL is not required) for confluence cloud version, use Basic auth. by setting the AUTH_EMAIL env. var.  
+For confluence server, that might depend on the version.  
+For version 8.5, Bearer auth. seems to be the working solution, so remove AUTH_EMAIL.  
 
 ### How to obtain your Confluence credentials:
 

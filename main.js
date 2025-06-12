@@ -16,9 +16,9 @@ const {
   PARENT_PAGE_ID
 } = process.env;
 
-if (!CONFLUENCE_BASE_URL || !AUTH_EMAIL || !API_TOKEN || !SPACE_KEY) {
+if (!CONFLUENCE_BASE_URL || !API_TOKEN || !SPACE_KEY) {
   console.error('❌ Missing environment variables. Check your .env file');
-  console.error('Required: CONFLUENCE_BASE_URL, AUTH_EMAIL, API_TOKEN, SPACE_KEY');
+  console.error('Required: CONFLUENCE_BASE_URL, API_TOKEN, SPACE_KEY');
   process.exit(1);
 }
 
@@ -32,7 +32,6 @@ const API_ENDPOINT = `${CONFLUENCE_BASE_URL}/rest/api/content`;
 // === STATE MANAGEMENT ===
 const STATE_FILE = path.join(HTML_FOLDER_PATH, 'transfer-state.json');
 
-// REMOVED: console.log(API_TOKEN) - SECURITY!
 console.log('✅ Configuration validated');
 
 // === CLI OPTIONS ===
@@ -105,6 +104,23 @@ function logEvent(page, action, detail = '', pageUrl = '') {
   console.log(`📝 ${page}: ${action} ${detail ? '- ' + detail : ''}`);
 }
 
+// === AUTHENTICATION HEADERS HELPER ===
+function getAuthHeaders(additionalHeaders = {}) {
+  if (AUTH_EMAIL) {
+    return {
+      // Basic Auth with email and API token
+      // alternate solution to: { username: AUTH_EMAIL, password: API_TOKEN },
+      'Authorization': `Basic ${Buffer.from(`${AUTH_EMAIL}:${API_TOKEN}`).toString('base64')}`,
+      ...additionalHeaders
+    };
+  }else {
+    return {
+      'Authorization': `Bearer ${API_TOKEN}`,
+      ...additionalHeaders
+    };
+  }
+}
+
 // === AXIOS ERROR HANDLING ===
 async function safeAxiosCall(axiosCall, retries = 3) {
   for (let i = 0; i < retries; i++) {
@@ -174,7 +190,7 @@ async function getPageByTitle(title) {
   try {
     const response = await safeAxiosCall(() => 
       axios.get(searchUrl, {
-        auth: { username: AUTH_EMAIL, password: API_TOKEN }
+        headers: getAuthHeaders()
       })
     );
     
@@ -219,8 +235,7 @@ async function createOrUpdatePage({ title, htmlContent, parentId }) {
             },
           },
         }, {
-          auth: { username: AUTH_EMAIL, password: API_TOKEN },
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' })
         })
       );
       
@@ -243,8 +258,7 @@ async function createOrUpdatePage({ title, htmlContent, parentId }) {
             },
           },
         }, {
-          auth: { username: AUTH_EMAIL, password: API_TOKEN },
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' })
         })
       );
       
@@ -268,7 +282,7 @@ async function getAttachmentById(attachmentId) {
   try {
     const response = await safeAxiosCall(() =>
       axios.get(url, {
-        auth: { username: AUTH_EMAIL, password: API_TOKEN }
+        headers: getAuthHeaders()
       })
     );
     
@@ -286,7 +300,7 @@ async function getExistingAttachment(pageId, fileName) {
   try {
     const response = await safeAxiosCall(() =>
       axios.get(url, {
-        auth: { username: AUTH_EMAIL, password: API_TOKEN },
+        headers: getAuthHeaders(),
         params: { filename: fileName }
       })
     );
@@ -306,11 +320,10 @@ async function updateAttachment(pageId, attachmentId, filePath, fileName) {
   try {
     const response = await safeAxiosCall(() =>
       axios.post(url, form, {
-        auth: { username: AUTH_EMAIL, password: API_TOKEN },
-        headers: {
+        headers: getAuthHeaders({
           ...form.getHeaders(),
-          'X-Atlassian-Token': 'no-check',
-        },
+          'X-Atlassian-Token': 'no-check'
+        })
       })
     );
     
@@ -371,11 +384,10 @@ async function uploadAttachment(pageId, filePath, fileName) {
 
       const response = await safeAxiosCall(() =>
         axios.post(url, form, {
-          auth: { username: AUTH_EMAIL, password: API_TOKEN },
-          headers: {
+          headers: getAuthHeaders({
             ...form.getHeaders(),
             'X-Atlassian-Token': 'no-check',
-          },
+          })
         })
       );
       
