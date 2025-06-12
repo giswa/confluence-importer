@@ -582,7 +582,14 @@ async function processImagesAndLinks($, title, basePath, pageId) {
       if (fs.existsSync(filePath)) {
         const uploadedUrl = await uploadAttachment(pageId, filePath, path.basename(href));
         if (uploadedUrl) {
-          $(el).attr('href', uploadedUrl);
+          const confluenceLink = `
+          <ac:link>
+            <ri:attachment ri:filename="${href}" />
+            <ac:plain-text-link-body>
+            <![CDATA[${linkText}]]></ac:plain-text-link-body>
+          </ac:link>
+          `;
+          $(el).replaceWith(confluenceLink);
           logEvent(title, 'File uploaded', href);
         }
       } else {
