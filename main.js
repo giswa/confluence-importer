@@ -38,6 +38,7 @@ console.log('✅ Configuration validated');
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const DRY_RUN_LOCAL = args.includes('--dry-run-local');
+const IGNORE_STATE = args.includes('--all');
 const LIMIT = parseInt((args.find(arg => arg.startsWith('--limit=')) || '').split('=')[1]) || Infinity;
 const LOG_PATH = (args.find(arg => arg.startsWith('--log=')) || '').split('=')[1] || null;
 
@@ -779,7 +780,7 @@ async function importHtmlFiles() {
 
 
 function loadState() {
-  if (fs.existsSync(STATE_FILE)) {
+  if (!IGNORE_STATE && fs.existsSync(STATE_FILE)) {
     try {
       return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
     } catch (e) {
