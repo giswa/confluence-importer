@@ -3,6 +3,7 @@ const path = require('path');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const FormData = require('form-data');
+const yaml = require('js-yaml');
 
 require('dotenv').config();
 
@@ -365,8 +366,39 @@ async function uploadAttachment(pageId, filePath, fileName) {
 }
 
 
+// === EXTRACT FRONT MATTER FROM HTML ===
+// This function extracts YAML front matter from HTML content, if any
+//   frontMatter: {
+//     title: "My Page",
+//     date: "2023-06-01",
+//     tags: ["html", "clean"]
+//   },
+//   content: "<div>\n  <br />\n  <img src=\"pic.jpg\" />\n</div>"
+// }
+function extractFrontMatter(html) {
+  const frontMatterRegex = /^---\s*([\s\S]*?)\s*---\s*/;
+  const match = html.match(frontMatterRegex);
+
+  if (!match) {
+    return { frontMatter: null, content: html };
+  }
+
+  let frontMatter = null;
+  try {
+    frontMatter = yaml.load(match[1]);
+  } catch (err) {
+    console.warn('Invalid YAML front matter:', err);
+  }
+
+  const content = html.slice(match[0].length);
+  return { frontMatter, content };
+}
+
+
 // === CLEAN HTML FOR XHTML OUTPUT ===
 function cleanHtml(html) {
+
+  let { frontMatter, content } = extractFrontMatter(html);
 
   // Ensure the HTML is well-formed for XHTML
   // Replace self-closing tags with proper XHTML format
@@ -375,7 +407,7 @@ function cleanHtml(html) {
 
   selfClosingTags.forEach(tag => {
     const regex = new RegExp(`<${tag}(\\s[^>]*)?>`, 'gi');
-    html = html.replace(regex, (match, attrs = '') => {
+    content = content.replace(regex, (match, attrs = '') => {
       attrs = attrs.trim();
       // Ensure there's a space before '/' only if there are attributes
       return `<${tag}${attrs ? ' ' + attrs : ''} />`;
@@ -383,7 +415,7 @@ function cleanHtml(html) {
   });
 
   // Load HTML into Cheerio in xml mode
-  const $ = cheerio.load(html, { xmlMode: true, decodeEntities: false });
+  const $ = cheerio.load(content, { xmlMode: true, decodeEntities: false });
   
   // Remove comments
   $('*').contents().each(function () {
