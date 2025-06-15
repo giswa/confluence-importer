@@ -145,45 +145,6 @@ async function safeAxiosCall(axiosCall, retries = 3) {
   }
 }
 
-// === HTML REPORT ===
-function generateReportHtml(logs) {
-  const rows = logs.map(({ page, action, detail, pageUrl }) => `
-    <tr>
-      <td>${pageUrl ? `<a href="${pageUrl}">${page}</a>` : page}</td>
-      <td>${action}</td>
-      <td>${detail}</td>
-    </tr>
-  `).join('');
-  return `
-    <p>Generated on ${new Date().toLocaleString()}</p>
-    <table border="1" style="border-collapse: collapse; width: 100%;">
-      <tr style="background-color: #f5f5f5;"><th>Page</th><th>Action</th><th>Detail</th></tr>
-      ${rows}
-    </table>
-  `;
-}
-
-// === INDEX PAGE ===
-function generateIndexHtml(logs) {
-  const uniquePages = logs
-    .filter(l => l.pageUrl && l.action === 'Created')
-    .reduce((acc, curr) => {
-      if (!acc.find(p => p.page === curr.page)) acc.push(curr);
-      return acc;
-    }, []);
-
-  const listItems = uniquePages.map(({ page, pageUrl }) =>
-    `<li><a href="${pageUrl}">${page}</a></li>`
-  ).join('\n');
-
-  return `
-    <p>Generated on ${new Date().toLocaleString()}</p>
-    <ul>
-      ${listItems}
-    </ul>
-  `;
-}
-
 // === GET PAGE BY TITLE ===
 async function getPageByTitle(title) {
   const searchUrl = `${API_ENDPOINT}?title=${encodeURIComponent(title)}&spaceKey=${SPACE_KEY}&expand=version`;
@@ -763,9 +724,6 @@ async function importHtmlFiles() {
     await delay(200);
   }
 
-  // === REPORT GENERATION ===
-  console.log('\n📋 Generating reports...');
-  
   // Write CSV log
   if (LOG_PATH) {
     const csv = 'Page,Action,Detail,URL\n' +
