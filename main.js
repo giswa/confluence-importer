@@ -366,7 +366,25 @@ async function uploadAttachment(pageId, filePath, fileName) {
 
 
 // === CLEAN HTML FOR XHTML OUTPUT ===
-function cleanHtml($) {
+function cleanHtml(html) {
+
+  // Ensure the HTML is well-formed for XHTML
+  // Replace self-closing tags with proper XHTML format
+  // This regex will match self-closing tags and ensure they end with " />"
+  const selfClosingTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
+
+  selfClosingTags.forEach(tag => {
+    const regex = new RegExp(`<${tag}(\\s[^>]*)?>`, 'gi');
+    html = html.replace(regex, (match, attrs = '') => {
+      attrs = attrs.trim();
+      // Ensure there's a space before '/' only if there are attributes
+      return `<${tag}${attrs ? ' ' + attrs : ''} />`;
+    });
+  });
+
+  // Load HTML into Cheerio in xml mode
+  const $ = cheerio.load(html, { xmlMode: true, decodeEntities: false });
+  
   // Remove comments
   $('*').contents().each(function () {
     if (this.type === 'comment') $(this).remove();
@@ -378,20 +396,6 @@ function cleanHtml($) {
   // Remove unwanted attributes
   $('*').each((_, el) => {
     $(el).removeAttr('style class id');
-  });
-  
-  // XHTML specific transformations
-  
-  // 1. Self-closing tags - ensure proper XHTML format
-  const selfClosingTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
-  selfClosingTags.forEach(tagName => {
-    $(tagName).each((_, el) => {
-      const $el = $(el);
-      // Ensure self-closing tags end with " />"
-      if ($el.html() === null || $el.html() === '') {
-        // Cheerio handles this automatically when we use $.xml() instead of $.html()
-      }
-    });
   });
   
   // 2. Convert attributes to lowercase (XHTML requirement)
@@ -453,43 +457,19 @@ function cleanHtml($) {
   // Only return the <body> content, or all HTML if no <body> tag exists
   if ($('body').length > 0) {
     // Return a cheerio instance containing only the body children
-    return cheerio.load($('body').html() || '', { xmlMode: true, decodeEntities: false });
+    return $('body').html() ;
   } else {
     // No <body> tag, return the whole document as-is
-    return $;
+    return $.html() ;
   }
 }
 
-// // Alternative version that returns XHTML string directly
-// function cleanHtmlToXhtml(htmlContent) {
-//   const $ = cheerio.load(htmlContent, {
-//     xmlMode: true, // This enables XML mode for better XHTML compliance
-//     decodeEntities: false
-//   });
-  
-//   // Apply the same cleaning logic
-//   const cleaned$ = cleanHtml($);
-  
-//   // Return as XML (XHTML) instead of HTML
-//   // This ensures self-closing tags are properly formatted
-//   return cleaned$.xml();
-// }
-
-// // === CLEAN HTML ===
-// function cleanHtml($) {
-//   $('*').contents().each(function () {
-//     if (this.type === 'comment') $(this).remove();
-//   });
-//   $('script, style, meta, link, head').remove();
-//   $('*').each((_, el) => {
-//     $(el).removeAttr('style class id');
-//   });
-//   return $;
-// }
-
 
 // === PROCESS IMAGES AND LINKS ===
-async function processImagesAndLinks($, title, basePath, pageId) {
+async function processImagesAndLinks(html, title, basePath, pageId) {
+
+  const $ = cheerio.load(html, { xmlMode: true, decodeEntities: false });
+
   // Process images
   const imgTags = $('img');
   for (const img of imgTags.toArray()) {
@@ -566,6 +546,9 @@ async function processImagesAndLinks($, title, basePath, pageId) {
       }
     }
   }
+
+  return $.html() ;
+
 }
 
 // === HELPER FUNCTION ===
@@ -683,12 +666,12 @@ async function importHtmlFiles() {
     try {
       // Read and clean HTML
       const html = fs.readFileSync(filePath, 'utf-8');
-      const $ = cleanHtml(cheerio.load(html, { xmlMode: true, decodeEntities: false }));
+      const clean_html = cleanHtml(html);
       
       // Create/update page
       const pageId = await createOrUpdatePage({
         title,
-        htmlContent: $.html(),
+        htmlContent: clean_html,
         parentId: PARENT_PAGE_ID
       });
       
@@ -698,13 +681,13 @@ async function importHtmlFiles() {
       }
       
       // Process images and links
-      await processImagesAndLinks($, title, HTML_FOLDER_PATH, pageId);
+      const confluence_html = await processImagesAndLinks(clean_html, title, HTML_FOLDER_PATH, pageId);
       
       // Final update with modified content (images/links)
       if ( pageId ) {
         await createOrUpdatePage({
           title,
-          htmlContent: $.html(),
+          htmlContent: confluence_html ,
           parentId: PARENT_PAGE_ID
         });
       }
