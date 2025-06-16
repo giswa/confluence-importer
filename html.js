@@ -189,14 +189,13 @@ async function processImagesAndLinks(html, title, pageMap ){ // , basePath, page
 
     const ext = path.extname(href).toLowerCase();
     
-    if ( pageMap.includes(href)  ) {
-      console.log('Found link to page:', href );
-
+    //  pageMap is { file: title , ... } ;
+    if ( pageMap[href]  ) {
       // Link to another page
-      // const linkedTitle = pageMap[href];
+      const linkedTitle = pageMap[href];
       const confluenceLink = `
         <ac:link>
-          <ri:page ri:content-title="${href}" />
+          <ri:page ri:content-title="${linkedTitle}" />
           <ac:plain-text-link-body><![CDATA[${linkText}]]></ac:plain-text-link-body>
         </ac:link>
       `;

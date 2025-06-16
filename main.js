@@ -425,6 +425,13 @@ async function importHtmlFiles() {
 
   const allFilesData = getHtmlFilesFromIndex().slice(0, LIMIT);
 
+  const fileToTitle = Object.fromEntries(
+    allFilesData.map(({ file, title }) => [file, title])
+  );
+
+  console.log(fileToTitle);
+
+
   if (allFilesData.length === 0) {
     console.error('❌ Nothing to process. Check index.html');
     process.exit(1);
@@ -465,11 +472,9 @@ async function importHtmlFiles() {
         continue;
       }
       
-      const filesArray = allFilesData.map(page => page.file);
       // Process images and links
-      const {confluence_html, files} = await cleanHtml.processImagesAndLinks(clean_html, title, filesArray);
+      const {confluence_html, files} = await cleanHtml.processImagesAndLinks(clean_html, title, fileToTitle);
       
-      console.log(files);
       for( const filePath of files) {
         const fullPath = path.resolve(HTML_FOLDER_PATH, filePath);
         const fileName = path.basename(filePath);
