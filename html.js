@@ -139,6 +139,7 @@ function cleanHtml(html) {
 
 // === PROCESS IMAGES AND LINKS ===
 async function processImagesAndLinks(html, title, pageMap ){ // , basePath, pageId) {
+  const imagesToUpload = [];
   const filesToUpload = [];
   const $ = cheerio.load(html, { xmlMode: true, decodeEntities: false });
 
@@ -163,7 +164,7 @@ async function processImagesAndLinks(html, title, pageMap ){ // , basePath, page
     //   $(img).attr('src', uploadedUrl);
     //   logEvent(title, 'Image uploaded', fileName);
     // }
-    filesToUpload.push(src);
+    imagesToUpload.push(src);
 
     // change img tag to confluence format
     const confluenceImg = `
@@ -201,7 +202,14 @@ async function processImagesAndLinks(html, title, pageMap ){ // , basePath, page
       `;
       $(el).replaceWith(confluenceLink);
       // logEvent(title, 'Page link modified', linkedTitle);
-      
+    }
+    else if (imagesToUpload.includes(href)) {
+      // link to an image that will be uploaded
+      let confluenceLink =  $(el).html() ;
+      confluenceLink = `<ac:link><ac:link-body>${confluenceLink}</ac:link-body></ac:link>` ;
+
+      $(el).replaceWith(confluenceLink);
+
     } else if (downloadableExtensions.includes(ext)) {
       
       //// Downloadable file
@@ -228,7 +236,7 @@ async function processImagesAndLinks(html, title, pageMap ){ // , basePath, page
     }
   }
 
-  return {confluence_html: $.html() , files: filesToUpload};
+  return {confluence_html: $.html() , files: [...filesToUpload, ...imagesToUpload]  };
 
 }
 
