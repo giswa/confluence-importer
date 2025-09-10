@@ -67,7 +67,7 @@ function cleanHtml(html) {
   
   // Remove unwanted attributes
   $('*').each((_, el) => {
-    $(el).removeAttr('style class id');
+    $(el).removeAttr('style class');
   });
   
   // 2. Convert attributes to lowercase (XHTML requirement)
@@ -204,38 +204,27 @@ async function processImagesAndLinks(html, title, pageMap ){ // , basePath, page
     } else if (href.startsWith('#')) {
       // internal link (anchor)
       const confluenceLink = `
-        <ac:link>
-          <ac:anchor>${href.substring(1)}</ac:anchor> 
+        <ac:link ac:anchor="${href.substring(1)}"> 
           <ac:plain-text-link-body><![CDATA[${linkText}]]></ac:plain-text-link-body>
         </ac:link>
       `;
 
-      /*
-      <ac:link ac:anchor="Rollover">
-          <ac:link-body>
-              <span>3.2</span>
-              <span>Rollover</span>
-          </ac:link-body>
-      </ac:link>
-      */
-
       $(el).replaceWith(confluenceLink);
-      logEvent(title, 'Internal anchor link modified', href);
 
-      // find the target element and add ac:anchor
+
+      // find the target element and add macro anchor
       const targetId = href.substring(1);
       const targetEl = $(`#${targetId}`);
       if (targetEl.length > 0) {
-        targetEl.attr('ac:anchor', targetId);
-        logEvent(title, 'Anchor added to target', targetId);
-      }
-
-      /* check maybe with 
-      �<ac:structured-macro ac:name="anchor" 
-          ac:schema-version="1" ac:macro-id="16440ecb-6e52-478a-908d-d64c2246eaa7">
-            <ac:parameter ac:name="">Rollover</ac:parameter>
+       const confluenceTarget = `
+       <ac:structured-macro ac:name="anchor" >
+            <ac:parameter ac:name="">${targetId}</ac:parameter>
         </ac:structured-macro>
-        */
+      `;
+
+        $(targetEl).prepend(confluenceTarget);
+
+      }
 
     
     }  
