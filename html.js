@@ -201,7 +201,44 @@ async function processImagesAndLinks(html, title, pageMap ){ // , basePath, page
       `;
       $(el).replaceWith(confluenceLink);
       // logEvent(title, 'Page link modified', linkedTitle);
-    }
+    } else if (href.startsWith('#')) {
+      // internal link (anchor)
+      const confluenceLink = `
+        <ac:link>
+          <ac:anchor>${href.substring(1)}</ac:anchor> 
+          <ac:plain-text-link-body><![CDATA[${linkText}]]></ac:plain-text-link-body>
+        </ac:link>
+      `;
+
+      /*
+      <ac:link ac:anchor="Rollover">
+          <ac:link-body>
+              <span>3.2</span>
+              <span>Rollover</span>
+          </ac:link-body>
+      </ac:link>
+      */
+
+      $(el).replaceWith(confluenceLink);
+      logEvent(title, 'Internal anchor link modified', href);
+
+      // find the target element and add ac:anchor
+      const targetId = href.substring(1);
+      const targetEl = $(`#${targetId}`);
+      if (targetEl.length > 0) {
+        targetEl.attr('ac:anchor', targetId);
+        logEvent(title, 'Anchor added to target', targetId);
+      }
+
+      /* check maybe with 
+      �<ac:structured-macro ac:name="anchor" 
+          ac:schema-version="1" ac:macro-id="16440ecb-6e52-478a-908d-d64c2246eaa7">
+            <ac:parameter ac:name="">Rollover</ac:parameter>
+        </ac:structured-macro>
+        */
+
+    
+    }  
     else if (imagesToUpload.includes(href)) {
       // link to an image that will be uploaded
       let confluenceLink =  $(el).html() ;
