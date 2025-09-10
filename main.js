@@ -3,6 +3,8 @@ const path = require('path');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const FormData = require('form-data');
+const yaml = require('js-yaml');
+const cleanHtml = require('./html');
 
 require('dotenv').config();
 
@@ -42,7 +44,6 @@ const IGNORE_STATE = args.includes('--all');
 const LIMIT = parseInt((args.find(arg => arg.startsWith('--limit=')) || '').split('=')[1]) || Infinity;
 const LOG_PATH = (args.find(arg => arg.startsWith('--log=')) || '').split('=')[1] || null;
 
-const downloadableExtensions = ['.pdf', '.docx', '.xlsx', '.zip', '.pptx', '.txt', '.csv'];
 
 // === UTILITIES ===
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -322,6 +323,7 @@ async function uploadAttachment(pageId, filePath, fileName) {
   
   if (DRY_RUN_LOCAL) {
     // copy file to dry-run output directory
+    console.log(pageId, filePath, filePath);
     const localPath = copyDryRunAsset(filePath, fileName);
     return localPath || `./assets/${fileName}`;
   }
@@ -364,223 +366,6 @@ async function uploadAttachment(pageId, filePath, fileName) {
   }
 }
 
-
-// === CLEAN HTML FOR XHTML OUTPUT ===
-function cleanHtml(html) {
-
-  // Ensure the HTML is well-formed for XHTML
-  // Replace self-closing tags with proper XHTML format
-  // This regex will match self-closing tags and ensure they end with " />"
-  const selfClosingTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
-
-  selfClosingTags.forEach(tag => {
-    const regex = new RegExp(`<${tag}(\\s[^>]*)?>`, 'gi');
-    html = html.replace(regex, (match, attrs = '') => {
-      attrs = attrs.trim();
-      // Ensure there's a space before '/' only if there are attributes
-      return `<${tag}${attrs ? ' ' + attrs : ''} />`;
-    });
-  });
-
-  // Load HTML into Cheerio in xml mode
-  const $ = cheerio.load(html, { xmlMode: true, decodeEntities: false });
-  
-  // Remove comments
-  $('*').contents().each(function () {
-    if (this.type === 'comment') $(this).remove();
-  });
-  
-  // Remove unwanted elements
-  $('script, style, meta, link, head').remove();
-  
-  // Remove unwanted attributes
-  $('*').each((_, el) => {
-    $(el).removeAttr('style class id');
-  });
-  
-  // 2. Convert attributes to lowercase (XHTML requirement)
-  $('*').each((_, el) => {
-    const $el = $(el);
-    const attributes = el.attribs || {};
-    
-    Object.keys(attributes).forEach(attr => {
-      if (attr !== attr.toLowerCase()) {
-        const value = attributes[attr];
-        $el.removeAttr(attr);
-        $el.attr(attr.toLowerCase(), value);
-      }
-    });
-  });
-  
-  // 3. Convert tag names to lowercase (XHTML requirement)
-  $('*').each((_, el) => {
-    const tagName = el.tagName || el.name;
-    if (tagName && tagName !== tagName.toLowerCase()) {
-      const $el = $(el);
-      const html = $el.html();
-      const attributes = el.attribs || {};
-      
-      // Create new element with lowercase tag name
-      const newEl = $(`<${tagName.toLowerCase()}>`);
-      
-      // Copy attributes
-      Object.keys(attributes).forEach(attr => {
-        newEl.attr(attr, attributes[attr]);
-      });
-      
-      // Set content
-      newEl.html(html);
-      
-      // Replace old element
-      $el.replaceWith(newEl);
-    }
-  });
-  
-  // 4. Ensure boolean attributes are properly formatted for XHTML
-  // In XHTML, boolean attributes must have values equal to their names
-  const booleanAttributes = ['checked', 'selected', 'disabled', 'readonly', 'multiple', 'autofocus', 'autoplay', 'controls', 'defer', 'hidden', 'loop', 'open', 'required', 'reversed'];
-  
-  $('*').each((_, el) => {
-    const $el = $(el);
-    booleanAttributes.forEach(attr => {
-      if ($el.attr(attr) !== undefined) {
-        $el.attr(attr, attr); // Set value equal to attribute name
-      }
-    });
-  });
-  
-  // 5. Ensure all attributes are quoted (handled by Cheerio by default)
-  
-  // 6. Add xml namespace if not present (optional, for strict XHTML)
-  // This would typically be done at the document level
-  
-  // Only return the <body> content, or all HTML if no <body> tag exists
-  if ($('body').length > 0) {
-    // Return a cheerio instance containing only the body children
-    return $('body').html() ;
-  } else {
-    // No <body> tag, return the whole document as-is
-    return $.html() ;
-  }
-}
-
-
-// === PROCESS IMAGES AND LINKS ===
-async function processImagesAndLinks(html, title, basePath, pageId) {
-
-  const $ = cheerio.load(html, { xmlMode: true, decodeEntities: false });
-
-  // Process images
-  const imgTags = $('img');
-  for (const img of imgTags.toArray()) {
-    const src = $(img).attr('src');
-    if (!src) continue;
-    
-    const fullPath = path.resolve(basePath, src);
-    const fileName = path.basename(src);
-    
-    if (!fs.existsSync(fullPath)) {
-      logEvent(title, 'Missing image', src);
-      continue;
-    }
-    
-    const uploadedUrl = await uploadAttachment(pageId, fullPath, fileName);
-    if (uploadedUrl) {
-      $(img).attr('src', uploadedUrl);
-      logEvent(title, 'Image uploaded', fileName);
-    }
-
-    // change img tag to confluence format
-    const confluenceImg = `
-      <ac:image>
-        <ri:attachment ri:filename="${fileName}" />
-        <ac:plain-text-body><![CDATA[${fileName}]]></ac:plain-text-body>
-      </ac:image>
-    `;
-    $(img).replaceWith(confluenceImg);
-    logEvent(title, 'Image tag modified', fileName);
-
-  }
-
-  // Process links
-  const anchorTags = $('a');
-  const pageMap = getPageMap(); // Helper function to get page map
-  
-  for (const el of anchorTags.toArray()) {
-    const href = $(el).attr('href');
-    const linkText = $(el).text();
-    if (!href) continue;
-
-    const ext = path.extname(href).toLowerCase();
-    
-    if (pageMap[href]) {
-      // Link to another page
-      const linkedTitle = pageMap[href];
-      const confluenceLink = `
-        <ac:link>
-          <ri:page ri:content-title="${linkedTitle}" />
-          <ac:plain-text-link-body><![CDATA[${linkText}]]></ac:plain-text-link-body>
-        </ac:link>
-      `;
-      $(el).replaceWith(confluenceLink);
-      logEvent(title, 'Page link modified', linkedTitle);
-      
-    } else if (downloadableExtensions.includes(ext)) {
-      // Downloadable file
-      const filePath = path.resolve(basePath, href);
-      if (fs.existsSync(filePath)) {
-        const uploadedUrl = await uploadAttachment(pageId, filePath, path.basename(href));
-        if (uploadedUrl) {
-          const confluenceLink = `
-          <ac:link>
-            <ri:attachment ri:filename="${href}" />
-            <ac:plain-text-link-body>
-            <![CDATA[${linkText}]]></ac:plain-text-link-body>
-          </ac:link>
-          `;
-          $(el).replaceWith(confluenceLink);
-          logEvent(title, 'File uploaded', href);
-        }
-      } else {
-        logEvent(title, 'Missing file', href);
-      }
-    }
-  }
-
-  return $.html() ;
-
-}
-
-// === HELPER FUNCTION ===
-function getPageMap() {
-  const indexPath = path.join(HTML_FOLDER_PATH, 'index.html');
-  
-  if (!fs.existsSync(indexPath)) {
-    console.error('❌ Cannot find index.html in folder:', HTML_FOLDER_PATH);
-    return {};
-  }
-  
-  try {
-    const indexHtml = fs.readFileSync(indexPath, 'utf-8');
-    const $ = cheerio.load(indexHtml);
-    const pageMap = {};
-    
-    $('a').each((_, element) => {
-      const href = $(element).attr('href');
-      const linkText = $(element).text().trim();
-      
-      if (href && href.endsWith('.html')) {
-        // Utilise le texte du lien comme titre, avec fallback au nom du fichier
-        pageMap[href] = linkText || path.basename(href, '.html');
-      }
-    });
-    
-    return pageMap;
-  } catch (error) {
-    console.error('❌ Erreur lecture index.html:', error.message);
-    return {};
-  }
-}
 
 // === EXTRACT FILES FROM INDEX.HTML ===
 function getHtmlFilesFromIndex() {
@@ -640,6 +425,13 @@ async function importHtmlFiles() {
 
   const allFilesData = getHtmlFilesFromIndex().slice(0, LIMIT);
 
+  const fileToTitle = Object.fromEntries(
+    allFilesData.map(({ file, title }) => [file, title])
+  );
+
+  console.log(fileToTitle);
+
+
   if (allFilesData.length === 0) {
     console.error('❌ Nothing to process. Check index.html');
     process.exit(1);
@@ -666,7 +458,7 @@ async function importHtmlFiles() {
     try {
       // Read and clean HTML
       const html = fs.readFileSync(filePath, 'utf-8');
-      const clean_html = cleanHtml(html);
+      const clean_html = cleanHtml.cleanHtml(html);
       
       // Create/update page
       const pageId = await createOrUpdatePage({
@@ -681,7 +473,13 @@ async function importHtmlFiles() {
       }
       
       // Process images and links
-      const confluence_html = await processImagesAndLinks(clean_html, title, HTML_FOLDER_PATH, pageId);
+      const {confluence_html, files} = await cleanHtml.processImagesAndLinks(clean_html, title, fileToTitle);
+      
+      for( const filePath of files) {
+        const fullPath = path.resolve(HTML_FOLDER_PATH, filePath);
+        const fileName = path.basename(filePath);
+        const uploadedUrl = await uploadAttachment(pageId, fullPath, fileName);
+      }
       
       // Final update with modified content (images/links)
       if ( pageId ) {
