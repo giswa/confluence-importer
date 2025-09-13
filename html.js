@@ -138,7 +138,7 @@ function cleanHtml(html) {
 
 
 // === PROCESS IMAGES AND LINKS ===
-async function processImagesAndLinks(html, title, pageMap ){ // , basePath, pageId) {
+async function processImagesAndLinks(html, title, pageMap, basePath ){ // , pageId) {
   const imagesToUpload = [];
   const filesToUpload = [];
   const $ = cheerio.load(html, { xmlMode: true, decodeEntities: false });
@@ -151,13 +151,13 @@ async function processImagesAndLinks(html, title, pageMap ){ // , basePath, page
     
     
     // Check if the image is a local file
-    //const fullPath = path.resolve(basePath, src);
+    const fullPath = path.resolve(basePath, src);
     const fileName = path.basename(src);
     
-    // if (!fs.existsSync(fullPath)) {
-    //   logEvent(title, 'Missing image', src);
-    //   continue;
-    // }
+    if (!fs.existsSync(fullPath)) {
+      console.error('Missing image: ', src);
+      continue;
+    }
     
     // const uploadedUrl = await uploadAttachment(pageId, fullPath, fileName);
     // if (uploadedUrl) {
@@ -235,13 +235,11 @@ async function processImagesAndLinks(html, title, pageMap ){ // , basePath, page
 
       $(el).replaceWith(confluenceLink);
 
-    } else if (downloadableExtensions.includes(ext)) {
+    } else if (downloadableExtensions.includes(ext) ) {
       
-      //// Downloadable file
-      // const filePath = path.resolve(basePath, href);
-      //if (fs.existsSync(filePath)) {
-        //const uploadedUrl = await uploadAttachment(pageId, filePath, path.basename(href));
-        //if (uploadedUrl) {
+      // Downloadable file
+       const filePath = path.resolve(basePath, href);
+      if (fs.existsSync(filePath)) {
           const confluenceLink = `
           <ac:link>
             <ri:attachment ri:filename="${href}" />
@@ -253,11 +251,9 @@ async function processImagesAndLinks(html, title, pageMap ){ // , basePath, page
 
           filesToUpload.push(href);
 
-          // logEvent(title, 'File uploaded', href);
-        // }
-      // } else {
-      //   // logEvent(title, 'Missing file', href);
-      // }
+       } else {
+         console.error('Missing file: ', href);
+      }
     }
   }
 

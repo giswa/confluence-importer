@@ -126,8 +126,11 @@ function getAuthHeaders(additionalHeaders = {}) {
 // === AXIOS ERROR HANDLING ===
 async function safeAxiosCall(axiosCall, retries = 3) {
   for (let i = 0; i < retries; i++) {
+    // console.log(`🔄 Attempt ${i + 1}/${retries}`); // on ${axiosCall}`);
     try {
-      return await axiosCall();
+      let a = await axiosCall();
+      // console.log('✅ Request successful');
+      return a ;
     } catch (error) {
       if (error.response?.status === 429) {
         const waitTime = Math.pow(2, i) * 1000; // Exponential backoff
@@ -139,9 +142,9 @@ async function safeAxiosCall(axiosCall, retries = 3) {
       if (i === retries - 1) {
         throw error; // Last attempt, throw error
       }
-      
+      console.log( `❌ Error: ${error.response?.status} - ${error.response?.data?.message || error.message}`);
       console.log(`⚠️ Attempt ${i + 1}/${retries} failed, retrying...`);
-      await delay(1000);
+      await delay(100);
     }
   }
 }
@@ -473,7 +476,7 @@ async function importHtmlFiles() {
       }
       
       // Process images and links
-      const {confluence_html, files} = await cleanHtml.processImagesAndLinks(clean_html, title, fileToTitle);
+      const {confluence_html, files} = await cleanHtml.processImagesAndLinks(clean_html, title, fileToTitle, HTML_FOLDER_PATH ); 
       
       for( const filePath of files) {
         const fullPath = path.resolve(HTML_FOLDER_PATH, filePath);
