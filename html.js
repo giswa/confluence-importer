@@ -214,29 +214,31 @@ async function processImagesAndLinks(html, title, pageMap, basePath ){ // , page
       // logEvent(title, 'Page link modified', linkedTitle);
     } else if (href.startsWith('#')) {
       // internal link (anchor)
-      const confluenceLink = `
-        <ac:link ac:anchor="${href.substring(1)}"> 
-          <ac:plain-text-link-body><![CDATA[${linkText}]]></ac:plain-text-link-body>
-        </ac:link>
-      `;
-
-      $(el).replaceWith(confluenceLink);
-
-
-      // find the target element and add macro anchor
       const targetId = href.substring(1);
-      const targetEl = $(`#${targetId}`);
-      if (targetEl.length > 0) {
-       const confluenceTarget = `
-       <ac:structured-macro ac:name="anchor" >
-            <ac:parameter ac:name="">${targetId}</ac:parameter>
-        </ac:structured-macro>
-      `;
+      if (targetId != "") {
+        const confluenceLink = `
+          <ac:link ac:anchor="${targetId}"> 
+            <ac:plain-text-link-body><![CDATA[${linkText}]]></ac:plain-text-link-body>
+          </ac:link>
+        `;
 
-        $(targetEl).prepend(confluenceTarget);
+        $(el).replaceWith(confluenceLink);
 
+
+        // find the target element and add macro anchor
+      
+        const targetEl = $(`#${targetId}`);
+        if (targetEl.length > 0) {
+        const confluenceTarget = `
+        <ac:structured-macro ac:name="anchor" >
+              <ac:parameter ac:name="">${targetId}</ac:parameter>
+          </ac:structured-macro>
+        `;
+
+          $(targetEl).prepend(confluenceTarget);
+
+        }
       }
-
     
     }  
     else if (imagesToUpload.includes(href)) {
@@ -249,11 +251,12 @@ async function processImagesAndLinks(html, title, pageMap, basePath ){ // , page
     } else if (downloadableExtensions.includes(ext) ) {
       
       // Downloadable file
-       const filePath = path.resolve(basePath, href);
+      const filePath = path.resolve(basePath, href);
       if (fs.existsSync(filePath)) {
+          const filename = path.basename(href) ; 
           const confluenceLink = `
           <ac:link>
-            <ri:attachment ri:filename="${href}" />
+            <ri:attachment ri:filename="${filename}" />
             <ac:plain-text-link-body>
             <![CDATA[${linkText}]]></ac:plain-text-link-body>
           </ac:link>
