@@ -236,7 +236,7 @@ async function createOrUpdatePage({ title, htmlContent, parentId }) {
     
   } catch (error) {
     console.error(`❌ Error creating/updating "${title}":`, error.response?.data || error.message);
-    logEvent(title, 'Error', error.message);
+    // logEvent(title, 'Error', error.message);
     return null;
   }
 }
@@ -400,7 +400,7 @@ function getHtmlFilesFromIndex() {
             file: href, 
             title: linkText || path.basename(href, '.html') // Fallback to file name if no title was found
           });
-          console.log(`✅ File found: ${href} → "${linkText}"`);
+          // console.log(`✅ File found: ${href} → "${linkText}"`);
         } else {
           console.warn(`⚠️ Cannot find file: ${href} (${linkText})`);
         }
@@ -452,7 +452,7 @@ async function importHtmlFiles() {
   for (const fileData of allFilesData) {
     const { file, title } = fileData;
     if (state.transferred.includes(file)) {
-      console.log(`⏩ Skip (already transferred): "${title}" (${file})`);
+      // console.log(`⏩ Skip (already transferred): "${title}" (${file})`);
       continue;
     }
     counter++;
