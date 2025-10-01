@@ -464,11 +464,13 @@ async function importHtmlFiles() {
       // Read and clean HTML
       const html = fs.readFileSync(filePath, 'utf-8');
       const clean_html = cleanHtml.cleanHtml(html);
-      
+      // Process images and links
+      const {confluence_html, files} = await cleanHtml.processImagesAndLinks(clean_html, title, fileToTitle, HTML_FOLDER_PATH ); 
+
       // Create/update page
       const pageId = await createOrUpdatePage({
         title,
-        htmlContent: clean_html,
+        htmlContent: confluence_html,
         parentId: PARENT_PAGE_ID
       });
       
@@ -477,8 +479,6 @@ async function importHtmlFiles() {
         continue;
       }
       
-      // Process images and links
-      const {confluence_html, files} = await cleanHtml.processImagesAndLinks(clean_html, title, fileToTitle, HTML_FOLDER_PATH ); 
       
       for( const filePath of files) {
         const fullPath = path.resolve(HTML_FOLDER_PATH, filePath);
@@ -486,14 +486,6 @@ async function importHtmlFiles() {
         const uploadedUrl = await uploadAttachment(pageId, fullPath, fileName);
       }
       
-      // Final update with modified content (images/links)
-      if ( pageId ) {
-        await createOrUpdatePage({
-          title,
-          htmlContent: confluence_html ,
-          parentId: PARENT_PAGE_ID
-        });
-      }
 
       // Add to the transfered file list
       state.transferred.push(file);
