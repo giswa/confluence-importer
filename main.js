@@ -177,7 +177,7 @@ async function createOrUpdatePage({ title, htmlContent, parentId }) {
   if (DRY_RUN_LOCAL) {
     // Save the HTML content to a local file
     const savedPath = saveDryRunFile(title, htmlContent, 'html');
-    logEvent(title, 'Dry-run local', savedPath ? `Saved: ${path.basename(savedPath)}` : 'Saving failed');
+    // logEvent(title, 'Dry-run local', savedPath ? `Saved: ${path.basename(savedPath)}` : 'Saving failed');
     return `dry-local-${title}`;
   }
 
@@ -326,7 +326,7 @@ async function uploadAttachment(pageId, filePath, fileName) {
   
   if (DRY_RUN_LOCAL) {
     // copy file to dry-run output directory
-    console.log(pageId, filePath, filePath);
+    // console.log(pageId, filePath, filePath);
     const localPath = copyDryRunAsset(filePath, fileName);
     return localPath || `./assets/${fileName}`;
   }
@@ -424,16 +424,18 @@ function getHtmlFilesFromIndex() {
 async function importHtmlFiles() {
   console.log('🚀 Starting import...');
 
+  // load state of progress
   const state = loadState();
 
+  // get all referenced files
   const allFilesData = getHtmlFilesFromIndex().slice(0, LIMIT);
 
+  // create an indexed object, with file as index
   const fileToTitle = Object.fromEntries(
     allFilesData.map(({ file, title }) => [file, title])
   );
 
-  console.log(fileToTitle);
-
+  // console.log(fileToTitle);
 
   if (allFilesData.length === 0) {
     console.error('❌ Nothing to process. Check index.html');
