@@ -241,14 +241,15 @@ async function processImagesAndLinks(html, title, pageMap, basePath ){ // , page
       }
     
     }  
-    else if (imagesToUpload.includes(href)) {
-      // link to an image that will be uploaded
-      let confluenceLink =  $(el).html() ;
-      confluenceLink = `<ac:link><ac:link-body>${confluenceLink}</ac:link-body></ac:link>` ;
+    // else if (imagesToUpload.includes(href)) {
+    //   // link to an image that will be uploaded
+    //   let confluenceLink =  $(el).html() ;
+    //   confluenceLink = `<ac:link><ac:link-body>${confluenceLink}</ac:link-body></ac:link>` ;
 
-      $(el).replaceWith(confluenceLink);
+    //   $(el).replaceWith(confluenceLink);
 
-    } else if (downloadableExtensions.includes(ext) ) {
+    // } 
+    else if (downloadableExtensions.includes(ext) ) {
       
       // Downloadable file
       const filePath = path.resolve(basePath, href);
