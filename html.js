@@ -6,6 +6,17 @@ const yaml = require('js-yaml');
 const downloadableExtensions = ['.pdf', '.docx', '.xlsx', '.zip', '.pptx', '.txt', '.csv'];
 
 
+function escapeHTML (str) { 
+  return str.replace(/[&<>'"]/g, 
+  tag => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag]));
+  }
+
 // === EXTRACT FRONT MATTER FROM HTML ===
 // This function extracts YAML front matter from HTML content, if any
 //   frontMatter: {
@@ -193,9 +204,9 @@ async function processImagesAndLinks(html, title, pageMap, basePath ){ // , page
     if ( pageMap[href]  ) {
       // Link to another page
       const linkedTitle = pageMap[href];
-      const confluenceLink = `
-        <ac:link>
-          <ri:page ri:content-title="${linkedTitle}" />
+      let confluenceLink =  $(el).html() ; 
+      confluenceLink = `<ac:link>
+          <ri:page ri:content-title="${escapeHTML(linkedTitle)}" />
           <ac:plain-text-link-body><![CDATA[${linkText}]]></ac:plain-text-link-body>
         </ac:link>
       `;
