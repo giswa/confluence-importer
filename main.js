@@ -19,13 +19,13 @@ const {
 } = process.env;
 
 if (!CONFLUENCE_BASE_URL || !API_TOKEN || !SPACE_KEY) {
-  console.error('❌ Missing environment variables. Check your .env file');
+  console.error('Missing environment variables. Check your .env file');
   console.error('Required: CONFLUENCE_BASE_URL, API_TOKEN, SPACE_KEY');
   process.exit(1);
 }
 
 if (!HTML_FOLDER_PATH || !fs.existsSync(HTML_FOLDER_PATH)) {
-  console.error('❌ HTML_FOLDER_PATH folder not found:', HTML_FOLDER_PATH);
+  console.error('HTML_FOLDER_PATH folder not found:', HTML_FOLDER_PATH);
   process.exit(1);
 }
 
@@ -34,7 +34,7 @@ const API_ENDPOINT = `${CONFLUENCE_BASE_URL}/rest/api/content`;
 // === STATE MANAGEMENT ===
 const STATE_FILE = path.join(HTML_FOLDER_PATH, 'transfer-state.json');
 
-console.log('✅ Configuration validated');
+console.log('Configuration validated');
 
 // === CLI OPTIONS ===
 const args = process.argv.slice(2);
@@ -55,7 +55,7 @@ if (DRY_RUN_LOCAL) {
   // Create dry-run output directory if it doesn't exist
   if (!fs.existsSync(DRY_RUN_OUTPUT_DIR)) {
     fs.mkdirSync(DRY_RUN_OUTPUT_DIR, { recursive: true });
-    console.log(`📁 Created folder for dry-run: ${DRY_RUN_OUTPUT_DIR}`);
+    console.log(`Created folder for dry-run-local: ${DRY_RUN_OUTPUT_DIR}`);
   }
 }
 
@@ -69,10 +69,10 @@ function saveDryRunFile(title, content, type = 'html') {
   
   try {
     fs.writeFileSync(filePath, content, 'utf-8');
-    console.log(`💾 Saved locally: ${fileName}`);
+    console.log(`Saved locally: ${fileName}`);
     return filePath;
   } catch (error) {
-    console.error(`❌ Saving failed for ${fileName}:`, error.message);
+    console.error(`Saving failed for ${fileName}:`, error.message);
     return null;
   }
 }
@@ -91,20 +91,20 @@ function copyDryRunAsset(srcPath, destName) {
   
   try {
     fs.copyFileSync(srcPath, finalDestPath);
-    console.log(`📋 Asset saved: ${destName}`);
+    console.log(`Asset saved: ${destName}`);
     return `./assets/${destName}`;
   } catch (error) {
-    console.error(`❌ Asset saving failed ${destName}:`, error.message);
+    console.error(`Asset saving failed ${destName}:`, error.message);
     return null;
   }
 }
 
 // === LOGGING ===
-const logs = [];
-function logEvent(page, action, detail = '', pageUrl = '') {
-  logs.push({ page, action, detail, pageUrl });
-  console.log(`📝 ${page}: ${action} ${detail ? '- ' + detail : ''}`);
-}
+// const logs = [];
+// function logEvent(page, action, detail = '', pageUrl = '') {
+//   logs.push({ page, action, detail, pageUrl });
+//   console.log(`${page}: ${action} ${detail ? '- ' + detail : ''}`);
+// }
 
 // === AUTHENTICATION HEADERS HELPER ===
 function getAuthHeaders(additionalHeaders = {}) {
@@ -126,15 +126,15 @@ function getAuthHeaders(additionalHeaders = {}) {
 // === AXIOS ERROR HANDLING ===
 async function safeAxiosCall(axiosCall, retries = 3) {
   for (let i = 0; i < retries; i++) {
-    // console.log(`🔄 Attempt ${i + 1}/${retries}`); // on ${axiosCall}`);
+    // console.log(`Attempt ${i + 1}/${retries}`); // on ${axiosCall}`);
     try {
       let a = await axiosCall();
-      // console.log('✅ Request successful');
+      // console.log('Request successful');
       return a ;
     } catch (error) {
       if (error.response?.status === 429) {
         const waitTime = Math.pow(2, i) * 1000; // Exponential backoff
-        console.log(`⏸️ Rate limit reached, waiting ${waitTime}ms...`);
+        console.log(`Rate limit reached, waiting ${waitTime}ms...`);
         await delay(waitTime);
         continue;
       }
@@ -142,8 +142,8 @@ async function safeAxiosCall(axiosCall, retries = 3) {
       if (i === retries - 1) {
         throw error; // Last attempt, throw error
       }
-      console.log( `❌ Error: ${error.response?.status} - ${error.response?.data?.message || error.message}`);
-      console.log(`⚠️ Attempt ${i + 1}/${retries} failed, retrying...`);
+      console.log( `Error: ${error.response?.status} - ${error.response?.data?.message || error.message}`);
+      console.log(`Attempt ${i + 1}/${retries} failed, retrying...`);
       await delay(100);
     }
   }
@@ -162,7 +162,7 @@ async function getPageByTitle(title) {
     
     return response.data.results[0] || null;
   } catch (error) {
-    console.error(`❌ Error searching page "${title}":`, error.response?.data || error.message);
+    console.error(`Error searching page "${title}":`, error.response?.data || error.message);
     return null;
   }
 }
@@ -170,7 +170,7 @@ async function getPageByTitle(title) {
 // === CREATE OR UPDATE PAGE ===
 async function createOrUpdatePage({ title, htmlContent, parentId }) {
   if (DRY_RUN) {
-    logEvent(title, 'Simulated (dry-run)', '');
+    // logEvent(title, 'Simulated (dry-run)', '');
     return `dry-${title}`;
   }
   
@@ -205,8 +205,8 @@ async function createOrUpdatePage({ title, htmlContent, parentId }) {
         })
       );
       
-      const pageUrl = `${CONFLUENCE_BASE_URL}/pages/${existingPage.id}`;
-      logEvent(title, 'Updated', `Version ${newVersion}`, pageUrl);
+      const pageUrl = `${CONFLUENCE_BASE_URL}/pages/viewpage.action?pageId=${existingPage.id}`;
+      console.log('Updated', `Version ${newVersion}`, pageUrl);
       return existingPage.id;
       
     } else {
@@ -229,13 +229,13 @@ async function createOrUpdatePage({ title, htmlContent, parentId }) {
       );
       
       const pageId = response.data.id;
-      const pageUrl = `${CONFLUENCE_BASE_URL}/pages/${pageId}`;
-      logEvent(title, 'Created', `ID ${pageId}`, pageUrl);
+      const pageUrl = `${CONFLUENCE_BASE_URL}/pages/viewpage.action?pageId=${pageId}`;
+      console.log('Created', `ID ${pageId}`, pageUrl);
       return pageId;
     }
     
   } catch (error) {
-    console.error(`❌ Error creating/updating "${title}":`, error.response?.data || error.message);
+    console.error(`Error creating/updating "${title}":`, error.response?.data || error.message);
     // logEvent(title, 'Error', error.message);
     return null;
   }
@@ -254,7 +254,7 @@ async function getAttachmentById(attachmentId) {
     
     return response.data;
   } catch (error) {
-    console.error(`❌ Error fetching attachment ${attachmentId}:`, error.message);
+    console.error(`Error fetching attachment ${attachmentId}:`, error.message);
     return null;
   }
 }
@@ -308,12 +308,12 @@ async function updateAttachment(pageId, attachmentId, filePath, fileName) {
     if (downloadLink) {
       return downloadLink.startsWith('http') ? downloadLink : `${CONFLUENCE_BASE_URL}${downloadLink}`;
     } else {
-      console.error(`❌ Unable to retrieve download link for ${fileName}`);
+      console.error(`Unable to retrieve download link for ${fileName}`);
       return null;
     }
     
   } catch (error) {
-    console.error(`❌ Error updating ${fileName}:`, error.response?.data || error.message);
+    console.error(`Error updating ${fileName}:`, error.response?.data || error.message);
     return null;
   }
 }
@@ -332,7 +332,7 @@ async function uploadAttachment(pageId, filePath, fileName) {
   }
 
   if (!pageId || pageId.startsWith('dry-')) {
-    console.error(`❌ Invalid page ID for upload ${fileName}`);
+    console.error(`Invalid page ID for upload ${fileName}`);
     return null;
   }
 
@@ -341,7 +341,7 @@ async function uploadAttachment(pageId, filePath, fileName) {
     const existingAttachment = await getExistingAttachment(pageId, fileName);
     
     if (existingAttachment) {
-      console.log(`🔄 Updating existing attachment: ${fileName}`);
+      console.log(`Updating existing attachment: ${fileName}`);
       return await updateAttachment(pageId, existingAttachment.id, filePath, fileName);
     } else {
       // Create new attachment
@@ -359,12 +359,12 @@ async function uploadAttachment(pageId, filePath, fileName) {
       );
       
       const downloadLink = response.data.results[0]._links.download;
-      console.log(`✅ New attachment created: ${fileName}`);
+      console.log(`New attachment created: ${fileName}`);
       return `${CONFLUENCE_BASE_URL}${downloadLink}`;
     }
     
   } catch (error) {
-    console.error(`❌ Error uploading ${fileName}:`, error.response?.data || error.message);
+    console.error(`Error uploading ${fileName}:`, error.response?.data || error.message);
     return null;
   }
 }
@@ -375,8 +375,8 @@ function getHtmlFilesFromIndex() {
   const indexPath = path.join(HTML_FOLDER_PATH, 'index.html');
   
   if (!fs.existsSync(indexPath)) {
-    console.error('❌ Cannot find index.html in folder:', HTML_FOLDER_PATH);
-    console.error('💡 Please create index.html with a links to your HTML pages');
+    console.error('Cannot find index.html in folder:', HTML_FOLDER_PATH);
+    console.error('Please create index.html with a links to your HTML pages');
     return [];
   }
   
@@ -385,7 +385,7 @@ function getHtmlFilesFromIndex() {
     const $ = cheerio.load(indexHtml);
     const htmlFiles = [{file: 'index.html', title: 'Index Page'}]; // Start with index.html
     
-    console.log('🔍 Analysing index.html...');
+    console.log('Analysing index.html...');
     
     $('a').each((_, element) => {
       const href = $(element).attr('href');
@@ -400,29 +400,29 @@ function getHtmlFilesFromIndex() {
             file: href, 
             title: linkText || path.basename(href, '.html') // Fallback to file name if no title was found
           });
-          // console.log(`✅ File found: ${href} → "${linkText}"`);
+          // console.log(`File found: ${href} → "${linkText}"`);
         } else {
-          console.warn(`⚠️ Cannot find file: ${href} (${linkText})`);
+          console.warn(`Cannot find file: ${href} (${linkText})`);
         }
       }
     });
     
     if (htmlFiles.length === 0) {
-      console.warn('⚠️ No linked html found in file index.html');
-      console.log('💡 Please ensure index.html contains links: <a href="page.html">My Page</a>');
+      console.warn('No linked html found in file index.html');
+      console.log('Please ensure index.html contains links: <a href="page.html">My Page</a>');
     }
     
     return htmlFiles;
     
   } catch (error) {
-    console.error('❌ Error while reading index.html:', error.message);
+    console.error('Error while reading index.html:', error.message);
     return [];
   }
 }
 
 // === MAIN FUNCTION ===
 async function importHtmlFiles() {
-  console.log('🚀 Starting import...');
+  console.log('Starting import...');
 
   // load state of progress
   const state = loadState();
@@ -435,30 +435,28 @@ async function importHtmlFiles() {
     allFilesData.map(({ file, title }) => [file, title])
   );
 
-  // console.log(fileToTitle);
-
   if (allFilesData.length === 0) {
-    console.error('❌ Nothing to process. Check index.html');
+    console.error('Nothing to process. Check index.html');
     process.exit(1);
   }
   
-  console.log(`📊 ${allFilesData.length} files to process`);
+  console.log(`${allFilesData.length} files to process`);
   
   if (DRY_RUN) {
-    console.log('🔍 DRY RUN mode enabled - no modifications will be made');
+    console.log('DRY RUN mode enabled - no modifications will be made');
   }
 
   let counter = 0;
   for (const fileData of allFilesData) {
     const { file, title } = fileData;
     if (state.transferred.includes(file)) {
-      // console.log(`⏩ Skip (already transferred): "${title}" (${file})`);
+      // console.log(`Skip (already transferred): "${title}" (${file})`);
       continue;
     }
     counter++;
     const filePath = path.join(HTML_FOLDER_PATH, file);
     
-    console.log(`\n📄 (${counter}/${allFilesData.length}) Treating: "${title}" (${file})`);
+    console.log(`\n(${counter}/${allFilesData.length}) Treating: "${title}" (${file})`);
     
     try {
       // Read and clean HTML
@@ -475,7 +473,7 @@ async function importHtmlFiles() {
       });
       
       if (!pageId) {
-        console.error(`❌ Failed to create page ${title}, skipping`);
+        console.error(`Failed to create page ${title}, skipping`);
         continue;
       }
       
@@ -486,16 +484,15 @@ async function importHtmlFiles() {
         const uploadedUrl = await uploadAttachment(pageId, fullPath, fileName);
       }
       
-
       // Add to the transfered file list
       state.transferred.push(file);
       saveState(state);
 
-      console.log(`✅ ${title} completed`);
+      console.log(`Completed`);
       
     } catch (error) {
-      console.error(`❌ Error processing ${title}:`, error.message);
-      logEvent(title, 'Fatal error', error.message);
+      console.error(`Error processing ${title}:`, error.message);
+      // logEvent(title, 'Fatal error', error.message);
     }
     
     // Rate limiting - pause between each page
@@ -503,15 +500,15 @@ async function importHtmlFiles() {
   }
 
   // Write CSV log
-  if (LOG_PATH) {
-    const csv = 'Page,Action,Detail,URL\n' +
-      logs.map(l => `"${l.page}","${l.action}","${l.detail}","${l.pageUrl}"`).join('\n');
-    fs.writeFileSync(LOG_PATH, csv);
-    console.log(`🧾 CSV log written: ${LOG_PATH}`);
-  }
+  // if (LOG_PATH) {
+  //   const csv = 'Page,Action,Detail,URL\n' +
+  //     logs.map(l => `"${l.page}","${l.action}","${l.detail}","${l.pageUrl}"`).join('\n');
+  //   fs.writeFileSync(LOG_PATH, csv);
+  //   console.log(`CSV log written: ${LOG_PATH}`);
+  // }
 
-  console.log('\n🎉 Import completed!');
-  console.log(`📊 Summary: ${logs.filter(l => l.action === 'Created').length} created, ${logs.filter(l => l.action === 'Updated').length} updated`);
+  console.log('\nImport completed!');
+  // console.log(`Summary: ${logs.filter(l => l.action === 'Created').length} created, ${logs.filter(l => l.action === 'Updated').length} updated`);
 }
 
 
@@ -520,7 +517,7 @@ function loadState() {
     try {
       return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
     } catch (e) {
-      console.warn('⚠️ Could not read resume file, it will be reset.');
+      console.warn('Could not read resume file, it will be reset.');
       return { transferred: [] };
     }
   }
@@ -533,12 +530,12 @@ function saveState(state) {
 
 // === GLOBAL ERROR HANDLING ===
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled error:', reason);
+  console.error('Unhandled error:', reason);
   process.exit(1);
 });
 
 // === EXECUTION ===
 importHtmlFiles().catch(err => {
-  console.error('💥 Fatal error:', err.message);
+  console.error('Fatal error:', err.message);
   process.exit(1);
 });
