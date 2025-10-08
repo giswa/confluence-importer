@@ -397,7 +397,7 @@ function getHtmlFilesFromIndex() {
         if (fs.existsSync(fullPath)) {
           // Return objet containing file and title
           htmlFiles.push({ 
-            file: href, 
+            file: fullPath, 
             title: linkText || path.basename(href, '.html') // Fallback to file name if no title was found
           });
           // console.log(`File found: ${href} → "${linkText}"`);
@@ -439,9 +439,9 @@ async function importHtmlFiles() {
     console.error('Nothing to process. Check index.html');
     process.exit(1);
   }
-  
+
   console.log(`${allFilesData.length} files to process`);
-  
+
   if (DRY_RUN) {
     console.log('DRY RUN mode enabled - no modifications will be made');
   }
@@ -454,16 +454,15 @@ async function importHtmlFiles() {
       continue;
     }
     counter++;
-    const filePath = path.join(HTML_FOLDER_PATH, file);
     
     console.log(`\n(${counter}/${allFilesData.length}) Treating: "${title}" (${file})`);
     
     try {
       // Read and clean HTML
-      const html = fs.readFileSync(filePath, 'utf-8');
+      const html = fs.readFileSync(file, 'utf-8');
       const clean_html = cleanHtml.cleanHtml(html);
       // Process images and links
-      const {confluence_html, files} = await cleanHtml.processImagesAndLinks(clean_html, title, fileToTitle, HTML_FOLDER_PATH ); 
+      const {confluence_html, files} = await cleanHtml.processImagesAndLinks(clean_html, title, fileToTitle, path.dirname(file) ); 
 
       // Create/update page
       const pageId = await createOrUpdatePage({

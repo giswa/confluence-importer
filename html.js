@@ -197,13 +197,14 @@ async function processImagesAndLinks(html, title, pageMap, basePath ){ // , page
     const href = $(el).attr('href');
     const linkText = $(el).text();
     if (!href) continue;
-
+    const fullPath = path.join(basePath, href);
     const ext = path.extname(href).toLowerCase();
-    
-    //  pageMap is { file: title , ... } ;
-    if ( pageMap[href]  ) {
+
+    // console.log(fullPath, pageMap[fullPath] ) ;
+
+    if ( pageMap[fullPath]  ) {
       // Link to another page
-      const linkedTitle = pageMap[href];
+      const linkedTitle = pageMap[fullPath];
       let confluenceLink =  $(el).html() ; 
       confluenceLink = `<ac:link>
           <ri:page ri:content-title="${escapeHTML(linkedTitle)}" />
