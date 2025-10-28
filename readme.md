@@ -1,6 +1,6 @@
 # Confluence HTML Importer
 
-Node.js tool to import HTML files to Confluence Cloud with automatic handling of images, links, and file attachments.
+Node.js tool to import HTML files to Confluence (Server or Cloud) with automatic handling of images, links, and file attachments.
 
 ## Prerequisites
 
