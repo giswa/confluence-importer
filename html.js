@@ -157,7 +157,7 @@ async function processImagesAndLinks(html, title, pageMap, basePath ){ // , page
   // Process images
   const imgTags = $('img');
   for (const img of imgTags.toArray()) {
-    const src = $(img).attr('src');
+    const src = decodeURI($(img).attr('src'));
     if (!src) continue;
     
     
@@ -170,11 +170,6 @@ async function processImagesAndLinks(html, title, pageMap, basePath ){ // , page
       continue;
     }
     
-    // const uploadedUrl = await uploadAttachment(pageId, fullPath, fileName);
-    // if (uploadedUrl) {
-    //   $(img).attr('src', uploadedUrl);
-    //   logEvent(title, 'Image uploaded', fileName);
-    // }
     imagesToUpload.push(src);
 
     // change img tag to confluence format
@@ -185,14 +180,11 @@ async function processImagesAndLinks(html, title, pageMap, basePath ){ // , page
       </ac:image>
     `;
     $(img).replaceWith(confluenceImg);
-    //logEvent(title, 'Image tag modified', fileName);
 
   }
 
   // Process links
   const anchorTags = $('a');
-  // const pageMap = getPageMap(); // Helper function to get page map
-  
   for (const el of anchorTags.toArray()) {
     const href = $(el).attr('href');
     const linkText = $(el).text();
@@ -241,21 +233,11 @@ async function processImagesAndLinks(html, title, pageMap, basePath ){ // , page
         }
       }
     
-    }  
-    // else if (imagesToUpload.includes(href)) {
-    //   // link to an image that will be uploaded
-    //   let confluenceLink =  $(el).html() ;
-    //   confluenceLink = `<ac:link><ac:link-body>${confluenceLink}</ac:link-body></ac:link>` ;
-
-    //   $(el).replaceWith(confluenceLink);
-
-    // } 
-    else if (downloadableExtensions.includes(ext) ) {
-      
+    } else if (downloadableExtensions.includes(ext) ) {
       // Downloadable file
-      const filePath = path.resolve(basePath, href);
+      const filePath = path.resolve(basePath, decodeURI(href));
       if (fs.existsSync(filePath)) {
-          const filename = path.basename(href) ; 
+          const filename = path.basename(decodeURI(href)) ; 
           const confluenceLink = `
           <ac:link>
             <ri:attachment ri:filename="${filename}" />
@@ -265,10 +247,9 @@ async function processImagesAndLinks(html, title, pageMap, basePath ){ // , page
           `;
           $(el).replaceWith(confluenceLink);
 
-          filesToUpload.push(href);
-
+          filesToUpload.push(decodeURI(href));
        } else {
-         console.error('Missing file: ', href);
+         console.error('Missing file: ', decodeURI(href));
       }
     }
   }
