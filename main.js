@@ -424,38 +424,43 @@ function getHtmlFilesFromIndex() {
 async function importHtmlFiles() {
   console.log('Starting import...');
 
+  if (DRY_RUN) {
+    console.log('DRY RUN mode enabled - no modifications will be made');
+  }
   // load state of progress
   const state = loadState();
 
   // get all referenced files
   const allFilesData = getHtmlFilesFromIndex().slice(0, LIMIT);
 
+  if (allFilesData.length === 0) {
+    console.error('Nothing to process. Check index.html');
+    process.exit(1);
+  }
+  console.log(`index contains: ${allFilesData.length} linked files`);
+
   // create an indexed object, with file as index
   const fileToTitle = Object.fromEntries(
     allFilesData.map(({ file, title }) => [file, title])
   );
 
-  if (allFilesData.length === 0) {
-    console.error('Nothing to process. Check index.html');
-    process.exit(1);
-  }
-
-  console.log(`${allFilesData.length} files to process`);
-
-  if (DRY_RUN) {
-    console.log('DRY RUN mode enabled - no modifications will be made');
-  }
-
   let counter = 0;
+  const toTransfer = [] ;
+  // filter already transfered
   for (const fileData of allFilesData) {
     const { file, title } = fileData;
-    if (state.transferred.includes(file)) {
-      // console.log(`Skip (already transferred): "${title}" (${file})`);
-      continue;
+    if (!state.transferred.includes(file)) {
+      toTransfer.push(fileData) ;
     }
+  }
+
+  console.log(`Remaining: ${toTransfer.length} file(s) to be transfered`);
+
+  for (const fileData of toTransfer) {
+    const { file, title } = fileData;
     counter++;
     
-    console.log(`\n(${counter}/${allFilesData.length}) Treating: "${title}" (${file})`);
+    console.log(`\n(${counter}/${toTransfer.length}) Treating: "${title}" (${file})`);
     
     try {
       // Read and clean HTML
