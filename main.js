@@ -383,7 +383,7 @@ function getHtmlFilesFromIndex() {
   try {
     const indexHtml = fs.readFileSync(indexPath, 'utf-8');
     const $ = cheerio.load(indexHtml);
-    const htmlFiles = [{file: 'index.html', title: 'Index Page'}]; // Start with index.html
+    const htmlFiles = [{file: indexPath, title: 'Index Page'}]; // Start with index.html
     
     console.log('Analysing index.html...');
     
